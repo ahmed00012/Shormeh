@@ -6,6 +6,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
 
 import 'package:hexcolor/hexcolor.dart';
 
@@ -72,6 +74,7 @@ int _vendorId;
   bool profile = false;
 
   bool more = false;
+  DateTime currentBackPressTime;
 
   // bool _hideNavBar;
   // bool control = true;
@@ -180,7 +183,18 @@ int _vendorId;
   }
 
 
-
+  Future<bool> onWillPop() {
+    DateTime now = DateTime.now();
+    if (currentBackPressTime == null ||
+        now.difference(currentBackPressTime) > Duration(seconds: 3)) {
+      currentBackPressTime = now;
+      Fluttertoast.showToast(msg: "Double Tab To Exit");
+      return Future.value(false);
+    }
+    else
+      exit(0);
+    return Future.value(true);
+  }
 
 
   // final PageStorageBucket bucket = PageStorageBucket();
@@ -202,7 +216,7 @@ int _vendorId;
             });
           }
           else
-            exit(0);
+            onWillPop();
         },
         child: Scaffold(
           body:Stack(
@@ -227,7 +241,7 @@ int _vendorId;
                             ? Text(
                           translate('lan.home'),
                           style:
-                          TextStyle(color: Colors.black26, fontSize: 12),
+                          TextStyle(color: Colors.black38, fontSize: 14,fontFamily: 'Tajawal'),
                         )
                             : Container()
                       ],
@@ -244,7 +258,7 @@ int _vendorId;
                             ? Text(
                           translate('lan.myPoints'),
                           style:
-                          TextStyle(color: Colors.black26, fontSize: 12),
+                          TextStyle(color: Colors.black38, fontSize: 14,fontFamily: 'Tajawal'),
                         )
                             : Container()
                       ],
@@ -266,7 +280,7 @@ int _vendorId;
                             ? Text(
                           translate('lan.orders'),
                           style:
-                          TextStyle(color: Colors.black26, fontSize: 12),
+                          TextStyle(color: Colors.black38, fontSize: 14,fontFamily: 'Tajawal'),
                         )
                             : Container()
                       ],
@@ -283,7 +297,7 @@ int _vendorId;
                             ? Text(
                           translate('lan.more'),
                           style:
-                          TextStyle(color: Colors.black26, fontSize: 12),
+                          TextStyle(color: Colors.black38, fontSize: 14,fontFamily: 'Tajawal',),
                         )
                             : Container()
                       ],

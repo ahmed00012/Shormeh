@@ -8,8 +8,10 @@ class ProductDetailsModel{
   String nameEn;
   String description;
   String price;
+  int liked;
 
 
-  ProductDetailsModel(this.id, this.image,this.mainName, this.nameAr, this.nameEn,this.description,this.price);
+  ProductDetailsModel(this.id, this.image,this.mainName,
+      this.nameAr, this.nameEn,this.description,this.price,this.liked);
 
 }

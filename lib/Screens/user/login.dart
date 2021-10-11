@@ -5,16 +5,18 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-//import 'package:flutter_facebook_login/flutter_facebook_login.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:form_bloc/form_bloc.dart';
+
+import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
+import 'package:overlay_support/overlay_support.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shormeh/Screens/Cats/1Categories.dart';
+
 import 'package:shormeh/Screens/Home/HomePage.dart';
 import 'package:shormeh/Screens/SelectBrabche.dart';
 import 'package:shormeh/Screens/user/signup.dart';
+
+import 'forgetpassword.dart';
 
 
 class Login extends StatefulWidget {
@@ -24,33 +26,20 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-  final email = TextFieldBloc(
-    validators: [
-      FieldBlocValidators.required,
-      FieldBlocValidators.email,
-    ],
-  );
-
-  final password = TextFieldBloc(
-    validators: [
-      FieldBlocValidators.required,
-    ],
-  );
-
+  final _formKey = GlobalKey<FormState>();
   final phoneNumberCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
   var datauser;
+int lan = 0;
+bool seePassword= false;
 
-
-  bool enable=true;
-  bool showPassword=false;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    getDataFromSharedPrfs();
     FirebaseMessaging.instance.getToken().then((value) {
       setState((){
         tokenFCM=value;
@@ -58,7 +47,13 @@ class _LoginState extends State<Login> {
     });
   }
 
-
+  Future getDataFromSharedPrfs() async {
+    final prefs = await SharedPreferences.getInstance();
+    int lan1 = prefs.getInt('translateLanguage');
+    setState(() {
+      lan = lan1;
+    });
+  }
 
 
 
@@ -75,171 +70,214 @@ class _LoginState extends State<Login> {
                   fit: BoxFit.fill,
                 ),
               ),
-              child: new ListView(children: <Widget>[
-                // Logo Image
-                SizedBox(height: MediaQuery.of(context).size.height/20,),
-                Container(
-                  width: MediaQuery.of(context).size.width,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(width: MediaQuery.of(context).size.width/10,),
-                      Container(
-                        alignment: Alignment.center,
-                        child: InkWell(
-                          onTap:(){
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => SelectBranche()),
-                            );
-                          },
-                          child: Container(
-                              alignment: Alignment.center,
-                              width: MediaQuery.of(context).size.width/8,
-                              height: MediaQuery.of(context).size.width/8,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(30.0),
-                                ),
-                                color: HomePage.colorYellow,
+              child:Directionality(
+                textDirection:  lan == 0?TextDirection.rtl:TextDirection.ltr,
+                child: Form(
+                  key: _formKey,
+                  child: new ListView(children: <Widget>[
+                    // Logo Image
+                    SizedBox(height: MediaQuery.of(context).size.height/20,),
+                    Container(
+                      width: MediaQuery.of(context).size.width,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(width: MediaQuery.of(context).size.width/10,),
+                          Container(
+                            alignment: Alignment.center,
+                            child: InkWell(
+                              onTap:(){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => SelectBranche()),
+                                );
+                              },
+                              child: Container(
+                                  alignment: Alignment.center,
+                                  width: MediaQuery.of(context).size.width/8,
+                                  height: MediaQuery.of(context).size.width/8,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(30.0),
+                                    ),
+                                    color: HomePage.colorYellow,
 
+                                  ),
+                                  child: Icon(Icons.arrow_back,color: Colors.white,size: MediaQuery.of(context).size.width/15,)
                               ),
-                              child: Icon(Icons.arrow_back,color: Colors.white,size: MediaQuery.of(context).size.width/15,)
+                            ),
                           ),
+                          SizedBox(width: MediaQuery.of(context).size.width/15,),
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            child: Text(translate('lan.login'),
+                                style:TextStyle(fontSize:  MediaQuery.of(context).size.width/18,
+                                  color: Colors.white,fontWeight: FontWeight.bold,
+                                )
+                            ),),
+                          Expanded(child: Container()),
+
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: MediaQuery.of(context).size.height/10,),
+
+
+                    Container(
+                      width: MediaQuery.of(context).size.width/3,
+                      height: MediaQuery.of(context).size.width/3,
+                      decoration: new BoxDecoration(
+                        image: new DecorationImage(
+                          image: AssetImage('assets/images/logo.png'),
                         ),
                       ),
-                      SizedBox(width: MediaQuery.of(context).size.width/15,),
-                      Container(
-                        alignment: Alignment.centerLeft,
-                        child: Text(translate('lan.login'),
-                            style:TextStyle(fontSize:  MediaQuery.of(context).size.width/18,
-                              color: Colors.white,fontWeight: FontWeight.bold,
-                            )
-                        ),),
-                      Expanded(child: Container()),
-
-                    ],
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height/10,),
-
-
-                Container(
-                  width: MediaQuery.of(context).size.width/3,
-                  height: MediaQuery.of(context).size.width/3,
-                  decoration: new BoxDecoration(
-                    image: new DecorationImage(
-                      image: AssetImage('assets/images/logo.png'),
                     ),
-                  ),
-                ),
-               SizedBox(height: MediaQuery.of(context).size.width/15),
+                   SizedBox(height: MediaQuery.of(context).size.width/15),
 
-                //الموبايل
-                Container(
-                  padding: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
+                    //الموبايل
+                    Container(
+                      padding: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
 
-                  child: TextFormField(
-                    enabled: enable,
-                    controller: phoneNumberCtrl,
-                    keyboardType: TextInputType.phone,
+                      child: TextFormField(
+                        controller: phoneNumberCtrl,
+                        keyboardType: TextInputType.phone,
+                        decoration: new InputDecoration(
+                            icon:Icon(Icons.phone,color: HexColor('#40976c')),
+                          enabledBorder: new UnderlineInputBorder(
+                              borderSide:
+                              new BorderSide(color: HomePage.colorGrey)),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: HomePage.colorGrey),
+                          ),
+                          labelStyle: new TextStyle(color: HomePage.colorGrey),
+                          hintText: translate('lan.phoneNumber'),
+                          labelText:translate('lan.phoneNumber'),
 
-                    decoration: new InputDecoration(
-                        icon:Icon(Icons.phone),
-                      enabledBorder: new UnderlineInputBorder(
-                          borderSide:
-                          new BorderSide(color: HomePage.colorGrey)),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: HomePage.colorGrey),
+                        ),
+                        cursorColor: HomePage.colorGrey,
+
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return translate('lan.phoneRequired');
+                          }
+                          else if (value.length!=10 ) {
+                            return translate('lan.phone10');
+                          }
+                          else if (!value.startsWith('05') ) {
+                            return translate('lan.phone050');
+                          }
+                          return null;
+                        },
                       ),
-                      labelStyle: new TextStyle(color: HomePage.colorGrey),
-                      hintText: translate('lan.phoneNumber'),
-                      labelText:translate('lan.phoneNumber'),
-
                     ),
-                    cursorColor: HomePage.colorGrey,
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.width/20),
-                //تحميل
+                    SizedBox(height: MediaQuery.of(context).size.width/20),
+                    //تحميل
 
-                //كلمة السر
-                Container(
-                  padding: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
-                  child: TextFormField(
-                    obscureText: !showPassword,
-                    enabled: enable,
-                    controller: passwordCtrl,
-                    keyboardType: TextInputType.text,
-                    decoration: new InputDecoration(
-                      icon:Icon(Icons.security),
+                    //كلمة السر
+                    Container(
+                      padding: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
+                      child: TextFormField(
+                        obscureText: !seePassword,
+                        controller: passwordCtrl,
+                        keyboardType: TextInputType.text,
 
-                      enabledBorder: new UnderlineInputBorder(
-                          borderSide:
-                          new BorderSide(color: HomePage.colorGrey)),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: HomePage.colorGrey),
+                        decoration: new InputDecoration(
+                          suffixIcon: GestureDetector(
+                            onTap: () {
+                              // Update the state i.e. toogle the state of passwordVisible variable
+                              setState(() {
+                                seePassword = !seePassword;
+                              });
+                            },
+                            child: Icon(
+                              seePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          icon:Icon(Icons.security,color: HexColor('#40976c')),
+                          enabledBorder: new UnderlineInputBorder(
+                              borderSide:
+                              new BorderSide(color: HomePage.colorGrey)),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: HomePage.colorGrey),
+                          ),
+                          labelStyle: new TextStyle(color: HomePage.colorGrey),
+                          hintText:translate('lan.password'),
+                          labelText: translate('lan.password'),
+                        ),
+                        cursorColor: HomePage.colorGrey,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return translate('lan.passwordRequired');
+                          }
+                          return null;
+                        },
+
                       ),
-                      labelStyle: new TextStyle(color: HomePage.colorGrey),
-                      hintText:translate('lan.password'),
-                      labelText: translate('lan.password'),
                     ),
-                    cursorColor: HomePage.colorGrey,
+                    SizedBox(height:35),
+                    InkWell(onTap: (){
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ForgetPassword()),
+                      );
+                    },child: Container(
+                      height: 20,
+                        alignment: Alignment.center,
+                        child: Text(translate('lan.forgetPassword'),style: TextStyle(
+                          fontSize: 16
+                        ),))),
 
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.width/20),
-                InkWell(onTap: (){
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(builder: (context) => ForgetPassword()),
-                  // );
-                },child: Container(
-                    alignment: Alignment.center,
-                    child: Text(translate('lan.forgetPassword'),))),
-                //Forget Password
+                    SizedBox(height: 30,),
 
-                SizedBox(height: MediaQuery.of(context).size.width/20,),
+                    //Submit
+                    Container(
+                      margin: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
+                      child: ButtonTheme(
+                        shape: new RoundedRectangleBorder(
+                            borderRadius: new BorderRadius.circular(10.0)),
+                        minWidth: 500.0,
+                        height: MediaQuery.of(context).size.width/8,
+                        child: RaisedButton(
+                          child: Text(
+                              translate('lan.login'),
+                              style:TextStyle(fontSize:  MediaQuery.of(context).size.width/20,color: Colors.white)
+                          ),
+                          color: HomePage.colorGreen,
+                          onPressed: () {
+                            if (_formKey.currentState.validate()) {
+                              SendDataToServer(context);
+                            }
 
-                //Submit
-                Container(
-                  margin: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
-                  child: ButtonTheme(
-                    shape: new RoundedRectangleBorder(
-                        borderRadius: new BorderRadius.circular(10.0)),
-                    minWidth: 500.0,
-                    height: MediaQuery.of(context).size.width/8,
-                    child: RaisedButton(
-                      child: Text(
-                          translate('lan.login'),
-                          style:TextStyle(fontSize:  MediaQuery.of(context).size.width/20,color: Colors.white)
+
+
+                          },
+                        ),
                       ),
-                      color: HomePage.colorGreen,
-                      onPressed: () {
-                        SendDataToServer(context);
+                    ),
+                    new Padding(
+                      padding: new EdgeInsets.only(top:  MediaQuery.of(context).size.width/20),
+                    ),
+                    InkWell(
+                      onTap: (){
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SignUp()),
+                        );
                       },
+                      child: Center(
+                        child: Text(translate('lan.newAccount'),style: TextStyle(fontSize: MediaQuery.of(context).size.width/25),),
+                      ),
                     ),
-                  ),
+
+
+
+
+                  ]),
                 ),
-                new Padding(
-                  padding: new EdgeInsets.only(top:  MediaQuery.of(context).size.width/20),
-                ),
-                InkWell(
-                  onTap: (){
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SignUp()),
-                    );
-                  },
-                  child: Center(
-                    child: Text(translate('lan.newAccount'),style: TextStyle(fontSize: MediaQuery.of(context).size.width/25),),
-                  ),
-                ),
-
-
-
-
-              ])),
+              )),
     )
       );
   }
@@ -247,10 +285,10 @@ class _LoginState extends State<Login> {
 
 
   Future SendDataToServer(BuildContext context) async {
-
-    print("RRRR $tokenFCM");
-
-    var response = await http.post("${HomePage.URL}auth/login",body: {
+    var response = await http.post("${HomePage.URL}auth/login",
+        headers:{
+          "Content-Language": lan==0?"en":"ar"
+        },body: {
       "phone": phoneNumberCtrl.text,
       "password": passwordCtrl.text,
       "device_id": tokenFCM,
@@ -258,10 +296,11 @@ class _LoginState extends State<Login> {
     datauser = json.decode(response.body);
     print(datauser);
     if("${datauser['success']}"=="1"){
+      displayToastMessage(translate('lan.welcome'));
         saveDataInSharedPref(context);
     }else{
 
-      displayToastMessage(datauser['message'].toString());
+      _showMyDialog(datauser['message'].toString());
     }
   }
 
@@ -272,7 +311,6 @@ class _LoginState extends State<Login> {
     await prefs.setBool('isLogin', true);
     await prefs.setString('name', "${datauser['name']}");
     await prefs.setString('phone', "${datauser['phone']}");
-    await prefs.setString('email', "${datauser['email']}");
     await prefs.setString('token', "${datauser['access_token']}");
 
     print("=>${datauser['name']}");
@@ -297,13 +335,55 @@ class _LoginState extends State<Login> {
   onBackPressed(BuildContext context) {
     Navigator.push(context, MaterialPageRoute(builder: (context)=>HomePage(isHomeScreen: true,)));
   }
+  Future<void> _showMyDialog(String text) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(translate('lan.warning'),style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold
+          ),),
+          content: Text(text),
+          actions: <Widget>[
+            Center(
+                child: InkWell(
+                  onTap: (){
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    height: 40,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: HexColor('#40976c'),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Center(child: Text(translate('lan.ok'),style: TextStyle(color: Colors.white,fontSize: 16),)),
+                  ),
+                )
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        textColor: Colors.white,
-        fontSize: 16.0
+    showSimpleNotification(
+        Container(height: 50,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(toastMessage,
+              style: TextStyle(color: Colors.black,
+                  fontSize: 18,
+                  fontFamily: 'Tajawal',
+                  fontWeight: FontWeight.bold),),
+          ),
+        ),
+        duration: Duration(seconds: 3),
+        background:HomePage.colorYellow
+
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hexcolor/hexcolor.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 
 class OfferDetails extends StatefulWidget {
@@ -38,11 +39,11 @@ class _OfferDetailsState extends State<OfferDetails> {
       appBar: new AppBar(
         backgroundColor:  HexColor('#40976c'),
         title: Text(translate('lan.offerDetails'),),
-
+elevation: 5.0,
         centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios,),
-          onPressed:()=>onBackPressed(context),
+          onPressed:()=>Navigator.pop(context),
         ),
       ),
       body: ListView(
@@ -65,12 +66,21 @@ class _OfferDetailsState extends State<OfferDetails> {
                 BoxShadow(color: HomePage.colorGreen, spreadRadius: 0.0),
               ],
             ),
-            child: ClipRRect(
+            child:widget.image==''?ClipRRect(
               borderRadius: BorderRadius.circular(20.0),
               child: Image(
                 width: MediaQuery.of(context).size.width ,
                 height: MediaQuery.of(context).size.height / 4.5,
-                image:NetworkImage("https://post.healthline.com/wp-content/uploads/2020/07/pizza-beer-1200x628-facebook-1200x628.jpg"),
+                image:AssetImage('assets/images/logo.png'),
+                fit: BoxFit.fill,
+              ),
+            ):
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20.0),
+              child: Image(
+                width: MediaQuery.of(context).size.width ,
+                height: MediaQuery.of(context).size.height / 4.5,
+                image:NetworkImage(widget.image),
                 fit: BoxFit.fill,
               ),
             ),
@@ -100,13 +110,5 @@ class _OfferDetailsState extends State<OfferDetails> {
         .pushNamedAndRemoveUntil('/home', (Route<dynamic> route) => false);
   }
 
-  void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        textColor: Colors.white,
-        fontSize: 16.0
-    );
-  }
+
 }

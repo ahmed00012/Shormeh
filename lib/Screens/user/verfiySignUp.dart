@@ -1,305 +1,372 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 //import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
+import 'package:lottie/lottie.dart';
+import 'package:overlay_support/overlay_support.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 import 'package:shormeh/Screens/SelectBrabche.dart';
 import 'package:shormeh/Screens/user/signup.dart';
 
+import 'ResetPassword.dart';
+
 class VerfySignup extends StatefulWidget {
+  String phone;
+  String name;
+  String password;
+
+  VerfySignup({this.name, this.password, this.phone});
 
   @override
   _VerfySignupState createState() => _VerfySignupState();
 }
 
 class _VerfySignupState extends State<VerfySignup> {
-  GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-
-
-  final phoneNumberCtrl = TextEditingController();
-  final codeCtrl = TextEditingController();
   var datauser;
-
-
-  bool enable=true;
-  bool showPassword=false;
+  TextEditingController pin = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  var tokenFCM = "";
+  int lan = 0;
 
   @override
   void initState() {
     // TODO: implement initState
+    getDataFromSharedPrfs();
+    FirebaseMessaging.instance.getToken().then((value) {
+      setState(() {
+        tokenFCM = value;
+      });
+    });
     super.initState();
   }
-
-
-
-
+  Future getDataFromSharedPrfs() async {
+    final prefs = await SharedPreferences.getInstance();
+    int lan1 = prefs.getInt('translateLanguage');
+    setState(() {
+      lan = lan1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-        onWillPop: ()=>onBackPressed(context),
-        child:Scaffold(
-          appBar: PreferredSize(
-              preferredSize: Size.fromHeight(0.0), // here the desired height
-              child: AppBar(
-              )
-          ),
-          body: new Container(
-              decoration: new BoxDecoration(
-                image: new DecorationImage(
-                  image: AssetImage('assets/images/loginBackground.png'),
-                  fit: BoxFit.fill,
+        onWillPop: () => onBackPressed(context),
+        child: Scaffold(
+
+          body: Directionality(
+            textDirection:  lan == 0?TextDirection.rtl:TextDirection.ltr,
+            child: Container(
+                decoration: new BoxDecoration(
+                  image: new DecorationImage(
+                    image: AssetImage('assets/images/loginBackground.png'),
+                    fit: BoxFit.fill,
+                  ),
                 ),
-              ),
-              child: new Column(children: <Widget>[
-                // Logo Image
-                SizedBox(height: MediaQuery.of(context).size.height/20,),
-                Container(
-                  width: MediaQuery.of(context).size.width,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(width: MediaQuery.of(context).size.width/10,),
+                child: ListView(
+                  children: [
+                    Column(children: <Widget>[
+                      // Logo Image
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height / 20,
+                      ),
                       Container(
-                        alignment: Alignment.center,
-                        child: InkWell(
-                          onTap:(){
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => SelectBranche()),
-                            );
-                          },
-                          child: Container(
+                        width: MediaQuery.of(context).size.width,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: MediaQuery.of(context).size.width / 10,
+                            ),
+                            Container(
                               alignment: Alignment.center,
-                              width: MediaQuery.of(context).size.width/8,
-                              height: MediaQuery.of(context).size.width/8,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(30.0),
-                                ),
-                                color: HomePage.colorYellow,
-                                boxShadow: [
-                                  //BoxShadow(color: HomePage.colorBlue, spreadRadius: 1.5),
-                                ],
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => SelectBranche()),
+                                  );
+                                },
+                                child: Container(
+                                    alignment: Alignment.center,
+                                    width: MediaQuery.of(context).size.width / 8,
+                                    height: MediaQuery.of(context).size.width / 8,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(30.0),
+                                      ),
+                                      color: HomePage.colorYellow,
+                                    ),
+                                    child: Icon(
+                                      Icons.arrow_back,
+                                      color: Colors.white,
+                                      size: MediaQuery.of(context).size.width / 15,
+                                    )),
                               ),
-                              child: Icon(Icons.arrow_back,color: Colors.white,size: MediaQuery.of(context).size.width/15,)
+                            ),
+                            SizedBox(
+                              width: MediaQuery.of(context).size.width / 15,
+                            ),
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              child: Text(translate('lan.verifyPhone'),
+                                  style: TextStyle(
+                                    fontSize: MediaQuery.of(context).size.width / 18,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  )),
+                            ),
+                            Expanded(child: Container()),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 100),
+
+                      Container(
+                          height: 200,
+                          width: 200,
+                          child: Lottie.asset('assets/images/login2.json')),
+
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Directionality(
+                            textDirection:  lan == 0?TextDirection.rtl:TextDirection.ltr,
+                            child: Text(
+                              ' : ' +  translate('lan.verification'),
+                              style:
+                              TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          SizedBox(height: 5,),
+                          Text(
+                            widget.phone,
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: HexColor('#40976c')),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(
+                        height: MediaQuery.of(context).size.width / 20,
+                      ),
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.8,
+                        child: Form(
+                          key: _formKey,
+                          child: PinCodeTextField(
+                            appContext: context,
+                            controller: pin,
+                            pastedTextStyle: TextStyle(
+                              color: HexColor('#40976c'),
+                              fontWeight: FontWeight.bold,
+                            ),
+                            length: 4,
+                            pinTheme: PinTheme(
+                              activeColor: HexColor('#40976c'),
+                              selectedColor: HexColor('#40976c'),
+                              inactiveColor: HexColor('#40976c'),
+                              shape: PinCodeFieldShape.box,
+                              borderRadius: BorderRadius.circular(10),
+                              fieldHeight: 60,
+                              fieldWidth: 60,
+                            ),
+                            cursorColor: HexColor('#40976c'),
+                            keyboardType: TextInputType.number,
+                            backgroundColor: Colors.white,
+                            onChanged: (String value) {
+                              print(value);
+                            },
+                            onCompleted: (x) {
+                              setState(() {
+                                pin.text = x;
+                              });
+                              print(pin.text);
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return translate('lan.pinRequired');
+                              } else if (value.length != 4) {
+                                return translate('lan.pinNotCompeleted');
+                              }
+                              return null;
+                            },
                           ),
                         ),
                       ),
-                      SizedBox(width: MediaQuery.of(context).size.width/15,),
+
+                      SizedBox(
+                        height: 60,
+                      ),
+
                       Container(
-                        alignment: Alignment.centerLeft,
-                        child: Text("Login",
-                            style:TextStyle(fontSize:  MediaQuery.of(context).size.width/18,
-                              color: Colors.white,fontWeight: FontWeight.bold,
-                            )
-                        ),),
-                      Expanded(child: Container()),
+                        margin: new EdgeInsets.only(
+                            left: MediaQuery.of(context).size.width / 15,
+                            right: MediaQuery.of(context).size.width / 15),
+                        child: ButtonTheme(
+                          shape: new RoundedRectangleBorder(
+                              borderRadius: new BorderRadius.circular(10.0)),
+                          minWidth: 500.0,
+                          height: MediaQuery.of(context).size.width / 8,
+                          child: RaisedButton(
+                            child: Text(translate('lan.verify'),
+                                style: TextStyle(
+                                    fontSize: MediaQuery.of(context).size.width / 20,
+                                    color: Colors.white)),
+                            color: HomePage.colorGreen,
+                            onPressed: () {
+                              if (_formKey.currentState.validate()) {
 
-                    ],
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height/10,),
-
-
-                Container(
-                  width: MediaQuery.of(context).size.width/3,
-                  height: MediaQuery.of(context).size.width/3,
-                  decoration: new BoxDecoration(
-                    image: new DecorationImage(
-                      image: AssetImage('assets/images/logo.png'),
-                    ),
-                  ),
-                ),
-               SizedBox(height: MediaQuery.of(context).size.width/15),
-
-                //الموبايل
-                Container(
-                  padding: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
-
-                  child: TextFormField(
-                    enabled: enable,
-                    controller: phoneNumberCtrl,
-                    keyboardType: TextInputType.phone,
-
-                    decoration: new InputDecoration(
-                        icon:Icon(Icons.phone),
-                      enabledBorder: new UnderlineInputBorder(
-                          borderSide:
-                          new BorderSide(color: HomePage.colorGrey)),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: HomePage.colorGrey),
+                                if(widget.name!=null)
+                                  sendDataToServer();
+                                else
+                                  resetPassword();
+                              }
+                            },
+                          ),
+                        ),
                       ),
-                      labelStyle: new TextStyle(color: HomePage.colorGrey),
-                      hintText: "Phone Number",
-                      labelText: "Phone Number",
-
-                    ),
-                    cursorColor: HomePage.colorGrey,
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.width/20),
-                //تحميل
-
-                //كلمة السر
-                Container(
-                  padding: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
-                  child: TextFormField(
-                    controller: codeCtrl,
-                    keyboardType: TextInputType.text,
-                    decoration: new InputDecoration(
-                      icon:Icon(Icons.phone),
-
-                      enabledBorder: new UnderlineInputBorder(
-                          borderSide:
-                          new BorderSide(color: HomePage.colorGrey)),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: HomePage.colorGrey),
-                      ),
-                      labelStyle: new TextStyle(color: HomePage.colorGrey),
-                      hintText: "Password",
-                      labelText: "Password",
-                    ),
-                    cursorColor: HomePage.colorGrey,
-
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.width/20),
-                InkWell(onTap: (){
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(builder: (context) => ForgetPassword()),
-                  // );
-                },child: Text("Forget Password")),
-                //Forget Password
-
-                SizedBox(height: MediaQuery.of(context).size.width/20,),
-
-                //Submit
-                Container(
-                  margin: new EdgeInsets.only(left: MediaQuery.of(context).size.width/15, right: MediaQuery.of(context).size.width/15),
-                  child: ButtonTheme(
-                    shape: new RoundedRectangleBorder(
-                        borderRadius: new BorderRadius.circular(10.0)),
-                    minWidth: 500.0,
-                    height: MediaQuery.of(context).size.width/8,
-                    child: RaisedButton(
-                      child: Text(
-                          "Log In",
-                          style:TextStyle(fontSize:  MediaQuery.of(context).size.width/20,color: Colors.white)
-                      ),
-                      color: HomePage.colorGreen,
-                      onPressed: () {
-                        if(enable){
-                          //getFirebaseToken();
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                new Padding(
-                  padding: new EdgeInsets.only(top:  MediaQuery.of(context).size.width/20),
-                ),
-                InkWell(
-                  onTap: (){
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SignUp()),
-                    );
-                  },
-                  child: Center(
-                    child: Text("New Account",style: TextStyle(fontSize: MediaQuery.of(context).size.width/25),),
-                  ),
-                ),
-
-
-
-
-              ])),
-    )
-      );
+                    ])
+                  ],
+                )),
+          ),
+        ));
   }
-  var tokenFCM="";
 
-
-  Future SendDataToServer(BuildContext context) async {
-
-    setState(() {
-      enable=false;
-    });
-    var response = await http.post("${HomePage.URL}user_api/login",body: {
-      "key": "1234567890",
-      "phone": phoneNumberCtrl.text,
-      "password": codeCtrl.text,
+  Future sendDataToServer() async {
+    print(pin.text + 'jftjcgtfvhyj');
+    print(widget.name);
+    print(widget.phone);
+    print(widget.password);
+    var response = await http.post("${HomePage.URL}auth/verify",headers:{
+      "Content-Language": lan==0?"en":"ar"
+    }, body: {
+      "name": widget.name,
+      "phone": widget.phone,
+      "password": widget.password,
+      "otp": pin.text,
       "device_id": tokenFCM,
     });
-    datauser = json.decode(response.body);
-    if(datauser['status']){
-      displayToastMessage(datauser['message'].toString());
-      if(datauser['message'].toString()=="تم تسجيل الدخول بنجاح"){
-        saveDataInSharedPref(context);
-      }
+    setState(() {
+      datauser = json.decode(response.body);
+    });
+    print(datauser);
 
-    }else{
-      setState(() {
-        enable=true;
-      });
-      displayToastMessage(datauser['message'].toString());
+    if ("${datauser['success']}" == "1") {
+       // displayToastMessage(datauser['message'].toString());
+      saveDataInSharedPref();
+    } else {
+     _showMyDialog(datauser['message'].toString());
     }
   }
 
-
-  void saveDataInSharedPref(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool('isLogin', true);
-    await prefs.setString('id', "${datauser['result']['customer_info']['id'].toString()}");
-    await prefs.setString('name', "${datauser['result']['customer_info']['name']}");
-    await prefs.setString('phone', "${datauser['result']['customer_info']['phone']}");
-    await prefs.setString('email', "${datauser['result']['customer_info']['email']}");
-    await prefs.setString('token', "${datauser['result']['customer_info']['token_id']}");
-    await prefs.setString('activation_status', "${datauser['result']['customer_info']['activation_status']}");
-    setState(() {
-      // HomePage.islogin = true;
-      // HomePage.id = "${datauser['result']['customer_info']['id'].toString()}";
-      // HomePage.name = "${datauser['result']['customer_info']['name']}";
-      // HomePage.phone = "${datauser['result']['customer_info']['phone']}";
-      // HomePage.email = "${datauser['result']['customer_info']['email']}";
-      // HomePage.token =  "${datauser['result']['customer_info']['token_id']}";
-      // HomePage.activation_status = "${datauser['result']['customer_info']['activation_status']}";
+  resetPassword()async{
+    var response = await http.post("${HomePage.URL}auth/verify-forget-password",headers:{
+      "Content-Language": lan==0?"en":"ar"
+    }, body: {
+      "phone": widget.phone,
+      "otp": pin.text,
     });
-    goToHome(context);
+    setState(() {
+      datauser = json.decode(response.body);
+    });
+    print(datauser);
 
+    if ("${datauser['success']}" == "1") {
+    displayToastMessage(datauser['message'].toString());
+      Navigator.push(context, MaterialPageRoute(builder: (context)=>ResetPassword(phone: widget.phone,)));
+    } else {
+      _showMyDialog(datauser['message'].toString());
+    }
   }
-  goToHome(BuildContext context){
-      // Navigator.of(context)
-      //     .pushNamedAndRemoveUntil('/home', (Route<dynamic> route) => false);
 
+  void saveDataInSharedPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLogin', true);
+    await prefs.setString('name', "${datauser['name']}");
+    await prefs.setString('phone', "${datauser['phone']}");
+    await prefs.setString('token', "${datauser['access_token']}");
 
-//    Navigator.push(
-//      context,
-//      MaterialPageRoute(builder: (context) => Login(fromMyAccount: false,)),
-//    );
+    goToHome();
+  }
+
+  goToHome() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+          builder: (context) => HomePage(
+                isHomeScreen: true,
+              )),
+    );
   }
 
   onBackPressed(BuildContext context) {
     Navigator.of(context).pop();
   }
+
+  Future<void> _showMyDialog(String text) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(translate('lan.warning'),style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold
+          ),),
+          content: Text(text),
+          actions: <Widget>[
+            Center(
+                child: InkWell(
+                  onTap: (){
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    height: 40,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: HexColor('#40976c'),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Center(child: Text(translate('lan.ok'),style: TextStyle(color: Colors.white,fontSize: 16),)),
+                  ),
+                )
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        textColor: Colors.white,
-        fontSize: 16.0
+    showSimpleNotification(
+        Container(height: 50,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(toastMessage,
+              style: TextStyle(color: Colors.black,
+                  fontSize: 18,
+                  fontFamily: 'Tajawal',
+                  fontWeight: FontWeight.bold),),
+          ),
+        ),
+        duration: Duration(seconds: 3),
+        background:HomePage.colorYellow
+
     );
   }
 }

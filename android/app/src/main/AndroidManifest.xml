@@ -8,6 +8,10 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAupSMvPPAn6ismu67IeXLQhVDKXQhyOVQ" />
          FlutterApplication and put your custom class here. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:name="io.flutter.app.FlutterApplication"
         android:label="شورمية"
@@ -48,6 +52,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

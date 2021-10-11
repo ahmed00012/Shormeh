@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:hexcolor/hexcolor.dart';
+import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/Car.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +17,8 @@ import 'package:shormeh/Screens/Home/HomePage.dart';
 import '../Card2MyAllProductsDetails.dart';
 
 class CarsList extends StatefulWidget {
+  bool added;
+  CarsList({this.added});
   @override
   _CarsListState createState() => _CarsListState();
 }
@@ -22,13 +26,14 @@ class CarsList extends StatefulWidget {
 class _CarsListState extends State<CarsList> {
 
   bool isIndicatorActive=true;
+  bool isChoosed = false;
 
   List<CarModel> allCarsModel= new List<CarModel>();
   List<Card1Model> allMyCardProducts= new List<Card1Model>();
 
   String cardToken="";
   String token="";
-
+String method;
   @override
   void initState() {
     // TODO: implement initState
@@ -62,6 +67,7 @@ class _CarsListState extends State<CarsList> {
            "${dataMyCars[i]['car_model']}",
            "${dataMyCars[i]['plate_number']}",
            "${dataMyCars[i]['car_color']}",
+           false
          ));
        }
 
@@ -77,9 +83,12 @@ class _CarsListState extends State<CarsList> {
     Navigator.of(context).pop();
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
         appBar: new AppBar(
           centerTitle: true,
           elevation: 5.0,
@@ -91,107 +100,161 @@ class _CarsListState extends State<CarsList> {
             icon: Icon(
               Icons.arrow_back_ios,
             ),
-            onPressed: () => onBackPressed(context),
+            onPressed: () {
+
+              if(widget.added!=null) {
+                int count = 0;
+                Navigator.popUntil(context, (route) {
+                  return count++ == 2;
+                });
+              }
+              else
+                Navigator.pop(context);
+
+            },
           ),
         ),
-      body: isIndicatorActive?Center(child: CircularProgressIndicator(),):
+      body:
       WillPopScope(
         onWillPop: (){
-          Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (c) => Card2()),
-                  (route) => false);
+          if(widget.added!=null) {
+            int count = 0;
+            Navigator.popUntil(context, (route) {
+              return count++ == 2;
+            });
+          }
+          else
+            Navigator.pop(context);
+
         },
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              flex: 9,
-              child: ListView.builder(
-                  shrinkWrap : true,
-                  physics: ScrollPhysics(),
-                  itemCount: allCarsModel.length,
-                  padding: EdgeInsets.fromLTRB(0.0,MediaQuery.of(context).size.width/50,0.0,MediaQuery.of(context).size.width/50),
+            isIndicatorActive
+                ? Center(
+                child:Container(
+                  height: 80,
+                  width: 80,
+                  child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+                )
+            )
+                :
+          Column(
+              children: [
+                Expanded(
+                  flex: 9,
+                  child: allCarsModel.length==0 ?
+                  Center(child:Lottie.asset('assets/images/lf20_hntom2e3.json',height: 150,width: 150),): ListView.builder(
+                      shrinkWrap : true,
+                      physics: ScrollPhysics(),
+                      itemCount: allCarsModel.length,
+                      padding: EdgeInsets.fromLTRB(0.0,MediaQuery.of(context).size.width/50,0.0,MediaQuery.of(context).size.width/50),
 
-                  itemBuilder: (BuildContext context, int index) {
-                    return InkWell(
-                      onTap: (){
-                        setCatAndGetMyCardProducts(allCarsModel[index].id);
-                      },
-                      child: Container(
-                        margin: EdgeInsets.fromLTRB(
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100,
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100),
-                        padding: EdgeInsets.fromLTRB(
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100,
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100
-                        ),
-                        child: IntrinsicHeight(
-                          child: Row(children: <Widget>[
-                            //Checkbox
-                            //Name
-                            Expanded(
-                              child: Container(
-                                  padding: EdgeInsets.all(MediaQuery.of(context).size.width/30),
-                                  child: Text("${allCarsModel[index].plate_number}",
-                                    style:TextStyle(fontWeight: FontWeight.bold,fontSize: MediaQuery.of(context).size.width/25),)),
-                            ),
+                      itemBuilder: (BuildContext context, int index) {
+                        return InkWell(
+                          onTap: (){
+                            setState(() {
+                              isChoosed = true;
+                              method = allCarsModel[index].car_model;
+                              allCarsModel.forEach((element) {element.isChoosed = false;});
+                              allCarsModel[index].isChoosed = true;
+                            });
+                            print(allCarsModel[index].id);
+                            if(isChoosed)
+                            setCatAndGetMyCardProducts(allCarsModel[index].id);
 
-                            InkWell(
-                              onTap:(){
-                                // Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(builder: (context) => OrderDetails(allOrderToHome:allOrderToHome)),
-                                // );
-                              },
+                          },
+                          child: Container(
+
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
                               child: Container(
-                                width: MediaQuery.of(context).size.width/7,
-                                alignment: Alignment.center,
+                                width: double.infinity,
+                                height: 55,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(Radius.circular(15)),
-                                  color: HomePage.colorGrey,
-
+                                  border: Border.all(
+                                      width: 1.0,
+                                      color:allCarsModel[index].isChoosed? HexColor('#40976c'):Colors.black12),
+                                  borderRadius: BorderRadius.all(
+                                      Radius.circular(
+                                          5.0) //                 <--- border radius here
+                                  ),
                                 ),
-                                child: Icon(Icons.edit,color: Colors.white,),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(
+                                      width: 10,
+                                    ),
+                                    Radio<String>(
+                                      value: allCarsModel[index].car_model,
+                                      groupValue: method,
+                                      onChanged: (value) {
+                                        setCatAndGetMyCardProducts(allCarsModel[index].id);
+                                        setState(() {
+                                          isChoosed = true;
+                                          method = allCarsModel[index].car_model;
+                                          allCarsModel.forEach((element) {element.isChoosed = false;});
+                                          allCarsModel[index].isChoosed = true;
+                                        });
+
+                                      },
+                                    ),
+                                    const SizedBox(
+                                      width: 5,
+                                    ),
+                                    Text(allCarsModel[index].car_model,
+                                      style: TextStyle(fontSize: 18),)
+                                  ],
+                                ),
                               ),
-                            ),
+                            ),),
+                        );
+                      }),
+                ),
 
-                          ],),
-                        ),),
-                    );
-                  }),
-            ),
-            Expanded(
-              flex: 1,
-              child : Container(
-                height: MediaQuery.of(context).size.width/8,
-                width: MediaQuery.of(context).size.width/2.3,
+                Container(
+                  height: 50,
+                  width: MediaQuery.of(context).size.width*0.4,
 
-                margin: EdgeInsets.all(MediaQuery.of(context).size.width/30),
-                child:  ButtonTheme(
-                  shape: new RoundedRectangleBorder(
-                      borderRadius: new BorderRadius.circular(10.0)),
-                  height: MediaQuery.of(context).size.width/8,
-                  child: RaisedButton(
-                    child: Text(
-                        translate('lan.adfCar'),
-                        style:TextStyle(fontSize:  MediaQuery.of(context).size.width/25,color: Colors.white)
+                  margin: EdgeInsets.all(MediaQuery.of(context).size.width/30),
+                  child:  ButtonTheme(
+                    shape: new RoundedRectangleBorder(
+                        borderRadius: new BorderRadius.circular(10.0)),
+                    height: MediaQuery.of(context).size.width/8,
+                    child: RaisedButton(
+                      child: Text(
+                          translate('lan.addCar'),
+                          style:TextStyle(fontSize:  MediaQuery.of(context).size.width/25,color: Colors.white)
+                      ),
+                      color: HomePage.colorGreen,
+                      onPressed: () {
+                        //Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => AddCar()),
+                        );
+
+                      },
                     ),
-                    color: HomePage.colorGreen,
-                    onPressed: () {
-                      //Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => AddCar()),
-                      );
-
-                    },
                   ),
+                ),
+                const SizedBox(height: 30,),
+              ],
+            ),
+            isChoosed? Container(height: double.infinity,
+              width: double.infinity,
+              color: Colors.white.withOpacity(0.6),
+              child: Center(
+                child: Container(
+                  height: 100,
+                  width: 100,
+                  child: Lottie.asset('assets/images/lf20_mvihowzk.json',fit: BoxFit. fill,height: 100,
+                    width: 100,),
+
                 ),
               ),
             )
+                :Container()
           ],
         ),
       )
@@ -200,24 +263,25 @@ class _CarsListState extends State<CarsList> {
   }
 
   Future setCatAndGetMyCardProducts(int idCar) async  {
-
-    print("$idCar");
-    print("$cardToken");
     var response = await http.post("${HomePage.URL}cart/choose_car",
-    headers: {
-      'Authorization':'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC8xMjcuMC4wLjE6ODAwMFwvYXBpXC9hdXRoXC9sb2dpbiIsImlhdCI6MTYyNTExOTI1MSwiZXhwIjo1MjU2NjU1MjUxLCJuYmYiOjE2MjUxMTkyNTEsImp0aSI6InJsM3o3MnczTmdNS0pLbXEiLCJzdWIiOjEsInBydiI6ImE1YmI5ODE5OGJiNDNkYTZiNDU3NDljMDQ3NTljODFjMTIyNDMzYzEifQ.2aQaThLvKuK3K0lcgvmb_qef1JsagE9Rl52zuuW9NS0',
-    },body: {
-      'car_id':'$idCar',
-      'cart_token': "$cardToken",
-    });
+        headers: {
+          'Authorization':'Bearer $token',
+        },body: {
+          'car_id':'$idCar',
+          'cart_token': "$cardToken",
+        });
+
 
     var dataOrderDetails = json.decode(response.body);
 
-    print("${dataOrderDetails}");
-    print("${dataOrderDetails['cart']['items'].length}");
+    log("${dataOrderDetails}");
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => OrderDetails(dataOrderDetails:dataOrderDetails)),
     );
+    setState(() {
+      isChoosed = false;
+    });
   }
 }

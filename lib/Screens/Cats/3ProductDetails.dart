@@ -1,33 +1,46 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:badges/badges.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+
 import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
+import 'package:lottie/lottie.dart';
+
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/Addon.dart';
 import 'package:shormeh/Models/Options.dart';
 import 'package:shormeh/Models/ProductDetailsModel.dart';
+
 import 'package:shormeh/Models/Slider.dart';
 import 'package:shormeh/Screens/Card/Card1MyProductDetials.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 import 'package:shormeh/Screens/user/login.dart';
 
+import '2Products.dart';
+
 class ProductDetails extends StatefulWidget {
   int productID;
   String productTotal;
+  int vendor;
+  String token;
+  int catID;
+  bool update;
 
-  ProductDetails({
-    Key key,
-    this.productID,
-    this.productTotal,
-  }) ;
+  ProductDetails(
+      {Key key,
+      this.productID,
+      this.productTotal,
+      this.vendor,
+      this.token,
+      this.catID,
+      this.update});
 
   @override
   _ProductDetailsState createState() => _ProductDetailsState();
@@ -35,13 +48,13 @@ class ProductDetails extends StatefulWidget {
 
 class _ProductDetailsState extends State<ProductDetails> {
   ProductDetailsModel productDetailsModel =
-      new ProductDetailsModel(0, "", "", "", "", "", "");
+      new ProductDetailsModel(0, "", "", "", "", "", "", 0);
   bool isIndicatorActive = true;
   List<SliderModel> allSliderImagesProduct = new List<SliderModel>();
   List<AddonModel> allAddons = new List<AddonModel>();
   List<OptionsModel> allOptions = new List<OptionsModel>();
   TextEditingController tECNotes = new TextEditingController();
-  List<String> images= [];
+  List<String> images = [];
   String lan = '';
 
   int portinsNum = 1;
@@ -52,15 +65,19 @@ class _ProductDetailsState extends State<ProductDetails> {
   int vendorID;
   int translationLanguage = 0;
   double totalAddOns = 0.0;
-  double totalOptions=0.0;
-  double total=0.0;
-  String token='';
+  double totalOptions = 0.0;
+  double total = 0.0;
+  String token = '';
+  bool loading = false;
+  int counter;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     getDataFromSharedPrfs();
+    print(widget.productID.toString()+'jjjjj');
+    print(widget.catID.toString()+'jjjjj');
 
   }
 
@@ -70,14 +87,18 @@ class _ProductDetailsState extends State<ProductDetails> {
     final _cardToken = prefs.getString("cardToken");
     final _vendorID = prefs.getInt("vendorID");
     final _isLogin = prefs.getBool("isLogin");
-    final _token= prefs.getString("token");
+    final _token = prefs.getString("token");
+    final _counter = prefs.getInt("counter");
+
     print(_token);
     setState(() {
-      token=_token;
+      token = _token;
       vendorID = _vendorID;
       _translateLanguage == 0 ? lan = 'en' : lan = 'ar';
+      _counter == null ? counter = 0 : counter = _counter;
       translationLanguage = _translateLanguage;
     });
+    print(vendorID.toString()+'hhhh');
     if (_cardToken != null) {
       setState(() {
         cardToken = _cardToken;
@@ -97,15 +118,15 @@ class _ProductDetailsState extends State<ProductDetails> {
       });
     }
 
-
-    print(widget.productID);
+    print(token.toString()+'jjjjjj');
   }
 
-
   Future getProductDetails() async {
-    var response = await http.get(
-        "${HomePage.URL}products/${widget.productID}/details",
-        headers: {"Content-Language": lan});
+    var response = await http
+        .get("${HomePage.URL}products/${widget.productID}/details", headers: {
+      "Content-Language": lan,
+      "Authorization": "Bearer ${widget.token}"
+    });
 
     var dataProductDetails = json.decode(response.body);
     log(dataProductDetails.toString());
@@ -113,13 +134,14 @@ class _ProductDetailsState extends State<ProductDetails> {
     setState(() {
       //allSubCats.add(new ProductsModel(dataAllSubCats[i]['id'],dataAllSubCats[i]['category']['image'],dataAllSubCats[i]['name'],dataAllSubCats[i]['category']['translations'][0]['name'],dataAllSubCats[i]['category']['translations'][1]['name']));
       productDetailsModel = ProductDetailsModel(
-          dataProductDetails['id'],
-          dataProductDetails['image_one'],
-          dataProductDetails['name'],
-          dataProductDetails['translations'][0]['name'],
-          dataProductDetails['translations'][1]['name'],
-          dataProductDetails['description'],
-          dataProductDetails['price'],
+        dataProductDetails['id'],
+        dataProductDetails['image_one'],
+        dataProductDetails['name'],
+        dataProductDetails['translations'][0]['name'],
+        dataProductDetails['translations'][1]['name'],
+        dataProductDetails['description'],
+        dataProductDetails['price'],
+        dataProductDetails['in_favourite'],
       );
 
       //Addons
@@ -141,13 +163,49 @@ class _ProductDetailsState extends State<ProductDetails> {
       totalOptions = double.parse(dataProductDetails['price']);
       //Slider
       images.add(dataProductDetails['image_one']);
-      if(dataProductDetails['image_two']!=null)
+      if (dataProductDetails['image_two'] != null)
         images.add(dataProductDetails['image_two']);
-      if(dataProductDetails['image_three']!=null)
+      if (dataProductDetails['image_three'] != null)
         images.add(dataProductDetails['image_three']);
 
       isIndicatorActive = false;
     });
+  }
+
+  void removeProduct(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      isIndicatorActive = true;
+    });
+
+    print(id);
+    print(cardToken);
+    var respons =
+        await http.post("${HomePage.URL}cart/remove_product", headers: {
+      "Content-Language": lan,
+      "Authorization": "Bearer $token",
+    }, body: {
+      "product_id": "$id",
+      "cart_token": "$cardToken",
+    });
+    var data = json.decode(respons.body);
+    print(data);
+    if (data['success'] == "1") {
+      if (counter == 1) {
+        SendDataToServer(token: '');
+        setState(() {
+          prefs.setString('cardToken', '');
+          cardToken = '';
+        });
+      }
+      else
+        SendDataToServer();
+
+      setState(() {
+        prefs.setInt("counter", counter - 1);
+      });
+    }
   }
 
   @override
@@ -157,634 +215,722 @@ class _ProductDetailsState extends State<ProductDetails> {
         centerTitle: true,
         title: Text(
           translate('lan.appName'),
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor:  HexColor('#40976c'),
-        leading: GestureDetector(
+        backgroundColor: HexColor('#40976c'),
+        leading: InkWell(
           onTap: () {
-          Navigator.pop(context);
+            Navigator.pop(context);
           },
           child: Icon(Icons.arrow_back_ios),
         ),
+        actions: [
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => Card1()));
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8.0, left: 8),
+              child: Badge(
+                  position: BadgePosition.topStart(),
+                  badgeColor: HomePage.colorYellow,
+                  badgeContent: Padding(
+                    padding: const EdgeInsets.all(1.0),
+                    child: Text(
+                      counter.toString(),
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Icon(
+                      Icons.shopping_cart,
+                      size: 28,
+                    ),
+                  )),
+            ),
+          ),
+        ],
         elevation: 5.0,
       ),
       body: Directionality(
-        textDirection:   translationLanguage == 1?TextDirection.rtl:TextDirection.ltr,
-        child: Column(
+        textDirection:
+            translationLanguage == 1 ? TextDirection.rtl : TextDirection.ltr,
+        child: Stack(
           children: [
-            Expanded(
-              child: ListView(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                children: [
-                  SizedBox(
-                    height: 10,
-                  ),
+            ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              children: [
+                SizedBox(
+                  height: 10,
+                ),
 
-                  //Slider
-                  Container(
-                    width: MediaQuery.of(context).size.width,
-                    height: MediaQuery.of(context).size.height / 4,
-                    child:images.length==1?Image.network(images[0]):CarouselSlider(
-                      options: CarouselOptions(
-                        enlargeCenterPage: true,
-                        autoPlay: true,
-                        autoPlayAnimationDuration: Duration(milliseconds: 1000),
-                        height: MediaQuery.of(context).size.height,
-                        viewportFraction: 1.0,
-                      ),
-                      items:images.map((e) {
-                        return InkWell(
-                          child:  Container(
-                              width: MediaQuery.of(context).size.width,
-                              child: Image.network(
-                                e,
-                                fit: BoxFit.fill,
-                                loadingBuilder:(BuildContext context, Widget child,ImageChunkEvent loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    color: Colors.black12,
-                                  );
-                                },
-                              )),
-                        );
-                      }).toList(),
-
+                //Slider
+                Column(
+                  children: [
+                    Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: 210,
+                      child: images.length == 0
+                          ? Image.asset(
+                              'assets/images/59529-skeleton-loader-kuhan.gif',
+                              fit: BoxFit.fill,
+                              width: double.infinity,
+                            )
+                          : images.length == 1
+                              ? Image.network(images[0])
+                              : CarouselSlider(
+                                  options: CarouselOptions(
+                                    enlargeCenterPage: true,
+                                    autoPlay: true,
+                                    autoPlayAnimationDuration:
+                                        Duration(milliseconds: 1000),
+                                    height: MediaQuery.of(context).size.height,
+                                    viewportFraction: 1.0,
+                                  ),
+                                  items: images.map((e) {
+                                    return InkWell(
+                                      child: Container(
+                                        width:
+                                            MediaQuery.of(context).size.width,
+                                        child: FadeInImage.assetNetwork(
+                                          placeholder:
+                                              'assets/images/59529-skeleton-loader-kuhan.gif',
+                                          image: e,
+                                          fit: BoxFit.fill,
+                                          width: double.infinity,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
                     ),
 
-
-
-                  ) ,
-
-                  //Body
-                  Container(
-                    margin:
-                        EdgeInsets.all(MediaQuery.of(context).size.width / 50),
-                    alignment: Alignment.center,
-                    child: Text(
-                      translationLanguage == 0
-                          ? "${productDetailsModel.nameEn}"
-                          : "${productDetailsModel.nameAr}",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: MediaQuery.of(context).size.width / 25),
-                    ),
-                  ),
-                  Container(
-                    alignment: Alignment.center,
-                    margin:
-                        EdgeInsets.all(MediaQuery.of(context).size.width / 100),
-                    child: Text(
-                      "${productDetailsModel.description}",
-                      style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width / 25),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                       widget.productTotal==null? portinsNum==1?((totalOptions+totalAddOns)*portinsNum).toString():
-                       "$total":widget.productTotal,
+                    //Body
+                    Container(
+                      margin: EdgeInsets.all(
+                          MediaQuery.of(context).size.width / 50),
+                      alignment: Alignment.center,
+                      child: Text(
+                        translationLanguage == 0
+                            ? "${productDetailsModel.nameEn}"
+                            : "${productDetailsModel.nameAr}",
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width / 20,
-                            color: HexColor('#40976c')),
+                            fontSize: MediaQuery.of(context).size.width / 25),
                       ),
-                      Text(
-                        ' '+translate('lan.rs'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(50, 5, 50, 5),
+                      child: Text(
+                        "${productDetailsModel.description}",
+                        maxLines: 4,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: MediaQuery.of(context).size.width / 20,
-                            color: HexColor('#40976c')),
+                            fontSize: MediaQuery.of(context).size.width / 25),
                       ),
-                    ],
-                  ),
-
-                  //Options
-                  allOptions.length>0? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          translate('lan.customYourOptions'),
+                          widget.productTotal == null
+                              ? portinsNum == 1
+                                  ? ((totalOptions + totalAddOns) * portinsNum)
+                                      .toString()
+                                  : "$total"
+                              : widget.productTotal,
                           style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width / 25,
-                              fontWeight: FontWeight.bold),
+                              fontWeight: FontWeight.bold,
+                              fontSize: MediaQuery.of(context).size.width / 20,
+                              color: HexColor('#40976c')),
                         ),
-                        const SizedBox(width: 5,),
-                        Text('['+translate('lan.chooseOne')+']',
-                          style: TextStyle(color: HexColor('#40976c') ),)
-
-
+                        Text(
+                          ' ' + translate('lan.rs'),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: MediaQuery.of(context).size.width / 20,
+                              color: HexColor('#40976c')),
+                        ),
                       ],
                     ),
-                  ):Container(),
-                  ListView.builder(
-                      shrinkWrap: true,
-                      physics: ScrollPhysics(),
-                      itemCount: allOptions.length,
-                      padding: EdgeInsets.fromLTRB(
-                          0.0,
-                          MediaQuery.of(context).size.width / 50,
-                          0.0,
-                          MediaQuery.of(context).size.width / 50),
-                      itemBuilder: (BuildContext context, int index) {
-                        return GestureDetector(
-                          onTap: () {
+                  ],
+                ),
 
-                            setState(() {
-                           // total =    total + double.parse(allOptions[index].price);
-                              if (allOptions[index].isSelected == false) {
-                                allOptions[index].isSelected = true;
-                                totalOptions =  double.parse(allOptions[index].price);
-                                total=((totalOptions+totalAddOns)*portinsNum);
-                                for (int i = 0; i < allOptions.length; i++) {
-                                  if (i != index) {
-                                    allOptions[i].isSelected = false;
-
-                                  }
-                                }
-                              } else if (allOptions[index].isSelected == true) {
-                                for (int i = 0; i < allOptions.length; i++) {
+                //Options
+                allOptions.length > 0
+                    ? Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            Text(
+                              translate('lan.customYourOptions'),
+                              style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.of(context).size.width / 25,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(
+                              width: 5,
+                            ),
+                            Text(
+                              '[' + translate('lan.chooseOne') + ']',
+                              style: TextStyle(color: HexColor('#40976c')),
+                            )
+                          ],
+                        ),
+                      )
+                    : Container(),
+                ListView.builder(
+                    shrinkWrap: true,
+                    physics: ScrollPhysics(),
+                    itemCount: allOptions.length,
+                    padding: EdgeInsets.fromLTRB(
+                        0.0,
+                        MediaQuery.of(context).size.width / 50,
+                        0.0,
+                        MediaQuery.of(context).size.width / 50),
+                    itemBuilder: (BuildContext context, int index) {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            // total =    total + double.parse(allOptions[index].price);
+                            if (allOptions[index].isSelected == false) {
+                              allOptions[index].isSelected = true;
+                              totalOptions =
+                                  double.parse(allOptions[index].price);
+                              widget.productTotal = null;
+                              total =
+                                  ((totalOptions + totalAddOns) * portinsNum);
+                              for (int i = 0; i < allOptions.length; i++) {
+                                if (i != index) {
                                   allOptions[i].isSelected = false;
-
                                 }
                               }
-                            });
-
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(10.0),
-                                  ),
-                                  color: Color(0xfff7f7f7),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Color(0xfff7f7f7),
-                                        spreadRadius: 0.0),
-                                  ],
+                            } else if (allOptions[index].isSelected == true) {
+                              for (int i = 0; i < allOptions.length; i++) {
+                                allOptions[i].isSelected = false;
+                              }
+                            }
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(10.0),
                                 ),
-                                padding: EdgeInsets.all(
-                                    MediaQuery.of(context).size.width / 50),
+                                color: Color(0xfff7f7f7),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Color(0xfff7f7f7),
+                                      spreadRadius: 0.0),
+                                ],
+                              ),
+                              padding: EdgeInsets.all(
+                                  MediaQuery.of(context).size.width / 50),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                        child: Text(
+                                      translationLanguage == 0
+                                          ? "${allOptions[index].text}"
+                                          : "${allOptions[index].text_ar}",
+                                      style: TextStyle(
+                                          fontSize: MediaQuery.of(context)
+                                                  .size
+                                                  .width /
+                                              25),
+                                    )),
+                                  ),
+                                  Text(
+                                    "${allOptions[index].price}" + ' ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize:
+                                            MediaQuery.of(context).size.width /
+                                                30,
+                                        color: HexColor('#40976c')),
+                                  ),
+                                  Text(
+                                    translate('lan.rs'),
+                                    style: TextStyle(
+                                        fontSize:
+                                            MediaQuery.of(context).size.width /
+                                                30,
+                                        fontWeight: FontWeight.bold,
+                                        color: HexColor('#40976c')),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 5, right: 5, bottom: 5),
+                                    child: SvgPicture.asset(
+                                      'assets/images/comment.svg',
+                                      height: 20,
+                                      width: 20,
+                                      color: allOptions[index].isSelected
+                                          ? Colors.green[600]
+                                          : Colors.black12,
+                                    ),
+                                  )
+                                ],
+                              )),
+                        ),
+                      );
+                    }),
+
+                //Addons
+                allAddons.length > 0
+                    ? Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            Text(
+                              translate('lan.customYourOrder'),
+                              style: TextStyle(
+                                  fontSize:
+                                      MediaQuery.of(context).size.width / 25,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(
+                              width: 5,
+                            ),
+                            Text(
+                              '[' + translate('lan.optional') + ']',
+                              style: TextStyle(color: HexColor('#40976c')),
+                            )
+                          ],
+                        ),
+                      )
+                    : Container(),
+                ListView.builder(
+                    shrinkWrap: true,
+                    physics: ScrollPhysics(),
+                    itemCount: allAddons.length,
+                    padding: EdgeInsets.fromLTRB(
+                        0.0,
+                        MediaQuery.of(context).size.width / 50,
+                        0.0,
+                        MediaQuery.of(context).size.width / 50),
+                    itemBuilder: (BuildContext context, int index) {
+                      return GestureDetector(
+                        onTap: () {
+                          print(allAddons[index].price.toString() + 'hhhhh');
+
+                          setState(() {
+                            // total =    total + double.parse(allOptions[index].price);
+                            if (allAddons[index].isSelected == false) {
+                              allAddons[index].isSelected = true;
+                              widget.productTotal = null;
+                              totalAddOns = totalAddOns +
+                                  double.parse(allAddons[index].price);
+                              total =
+                                  ((totalOptions + totalAddOns) * portinsNum);
+                            } else {
+                              allAddons[index].isSelected = false;
+                              totalAddOns = totalAddOns -
+                                  double.parse(allAddons[index].price);
+                              total =
+                                  ((totalOptions + totalAddOns) * portinsNum);
+                            }
+                          });
+                          print(total.toString() + 'jjjjjjj');
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(10.0),
+                                ),
+                                color: Color(0xfff7f7f7),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Color(0xfff7f7f7),
+                                      spreadRadius: 0.0),
+                                ],
+                              ),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 8, right: 8),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Expanded(
-                                      child: Container(
-                                          child: Text(
+                                      child: Text(
                                         translationLanguage == 0
-                                            ? "${allOptions[index].text}"
-                                            : "${allOptions[index].text_ar}",
+                                            ? "${allAddons[index].nameEn}"
+                                            : "${allAddons[index].nameAr}",
                                         style: TextStyle(
                                             fontSize: MediaQuery.of(context)
                                                     .size
                                                     .width /
-                                                25),
-                                      )),
+                                                24),
+                                      ),
                                     ),
                                     Text(
-                                      "${allOptions[index].price}"+' ',
+                                      "${allAddons[index].price}" + ' ',
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize:
-                                              MediaQuery.of(context).size.width /
-                                                  30,
+                                          fontSize: MediaQuery.of(context)
+                                                  .size
+                                                  .width /
+                                              30,
                                           color: HexColor('#40976c')),
                                     ),
                                     Text(
                                       translate('lan.rs'),
                                       style: TextStyle(
-                                          fontSize:
-                                              MediaQuery.of(context).size.width /
-                                                  30,
+                                          fontSize: MediaQuery.of(context)
+                                                  .size
+                                                  .width /
+                                              30,
                                           fontWeight: FontWeight.bold,
                                           color: HexColor('#40976c')),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.only(left: 5,right: 5,bottom: 5),
+                                      padding:
+                                          const EdgeInsets.fromLTRB(5, 0, 5, 5),
                                       child: SvgPicture.asset(
                                         'assets/images/comment.svg',
                                         height: 20,
                                         width: 20,
-                                        color: allOptions[index].isSelected
-                                            ? Colors.green[600]
+                                        color: allAddons[index].isSelected
+                                            ? HexColor('#40976c')
                                             : Colors.black12,
                                       ),
                                     )
                                   ],
-                                )),
-                          ),
-                        );
-                      }),
-
-                  //Addons
-                  allAddons.length>0? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Text(
-                          translate('lan.customYourOrder'),
-                          style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width / 25,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 5,),
-                        Text('['+translate('lan.optional')+']',
-                          style: TextStyle(color: HexColor('#40976c') ),)
-
-
-                      ],
-                    ),
-                  ):Container(),
-                  ListView.builder(
-                      shrinkWrap: true,
-                      physics: ScrollPhysics(),
-                      itemCount: allAddons.length,
-                      padding: EdgeInsets.fromLTRB(
-                          0.0,
-                          MediaQuery.of(context).size.width / 50,
-                          0.0,
-                          MediaQuery.of(context).size.width / 50),
-                      itemBuilder: (BuildContext context, int index) {
-                        return GestureDetector(
-
-                          onTap: () {
-                            print(allAddons[index].price.toString()+'hhhhh');
-
-                            setState(() {
-                              // total =    total + double.parse(allOptions[index].price);
-                              if (allAddons[index].isSelected == false) {
-                                allAddons[index].isSelected = true;
-                                totalAddOns =    totalAddOns  + double.parse(allAddons[index].price);
-                                total=((totalOptions+totalAddOns)*portinsNum);
-                              } else {
-                                allAddons[index].isSelected = false;
-                                totalAddOns  =    totalAddOns  - double.parse(allAddons[index].price);
-                                total=((totalOptions+totalAddOns)*portinsNum);
-                              }
-                            });
-                            print(total.toString()+'jjjjjjj');
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(10.0),
-                                  ),
-                                  color: Color(0xfff7f7f7),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Color(0xfff7f7f7),
-                                        spreadRadius: 0.0),
-                                  ],
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 8,right: 8),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          translationLanguage == 0
-                                          ? "${allAddons[index].nameEn}"
-                                          : "${allAddons[index].nameAr}",
-                                          style: TextStyle(
-                                          fontSize: MediaQuery.of(context)
-                                                  .size
-                                                  .width /
-                                              24),
-                                        ),
-                                      ),
-                                      Text(
-                                        "${allAddons[index].price}"+' ',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize:
-                                                MediaQuery.of(context).size.width /
-                                                    30,
-                                            color: HexColor('#40976c')),
-                                      ),
-                                      Text(
-                                        translate('lan.rs'),
-                                        style: TextStyle(
-                                            fontSize:
-                                                MediaQuery.of(context).size.width /
-                                                    30,
-                                            fontWeight: FontWeight.bold,
-                                            color: HexColor('#40976c')),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(5, 0, 5, 5),
-                                        child: SvgPicture.asset(
-                                          'assets/images/comment.svg',
-                                          height: 20,
-                                          width: 20,
-                                          color: allAddons[index].isSelected
-                                              ? HexColor('#40976c')
-                                              : Colors.black12,
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                )),
-                          ),
-                        );
-                      }),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  //Notes
-                  Container(
-                    margin: EdgeInsets.fromLTRB(
-                      MediaQuery.of(context).size.width / 30,
-                      0,
-                      MediaQuery.of(context).size.width / 30,
-                      0,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          translate('lan.notes')+' ',
-                          style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width / 25,
-                              fontWeight: FontWeight.bold),
+                              )),
                         ),
-                        Text('[' + translate('lan.optional') + ']',
-                            style: TextStyle(
-                                fontSize: MediaQuery.of(context).size.width / 30,
-                                color: HomePage.colorGrey)),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 20, right: 20, top: 10),
-                    child: Container(
-                      height: 120,
-                      decoration: BoxDecoration(
-                          borderRadius: new BorderRadius.circular(20),
-                          border: Border.all(color: HexColor('#DDDDDD'))),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                            keyboardType: TextInputType.multiline,
-                            maxLines: 5,
-                            decoration: InputDecoration.collapsed(
-                              hintText: translate('lan.leftYourNotes'),
-                              hintStyle: TextStyle(color: Colors.black),
-                            )),
-                      ),
-                    ),
-                  ),
+                      );
+                    }),
 
-                  //Portions
-
-                  SizedBox(
-                    height: 20,
+                const SizedBox(
+                  height: 10,
+                ),
+                //Notes
+                Container(
+                  margin: EdgeInsets.fromLTRB(
+                    MediaQuery.of(context).size.width / 30,
+                    0,
+                    MediaQuery.of(context).size.width / 30,
+                    0,
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Row(
                     children: [
                       Text(
-                        translate('lan.numOfOrders'),
+                        translate('lan.notes') + ' ',
                         style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                        ),
+                            fontSize: MediaQuery.of(context).size.width / 25,
+                            fontWeight: FontWeight.bold),
                       ),
-                      SizedBox(
-                        width: 25,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          if (portinsNum > 1)
-                            setState(() {
-                              portinsNum--;
-                              total = (totalAddOns + totalOptions)*portinsNum;
-                            });
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: HexColor('#40976C'),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '-',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 7,
-                      ),
-                      Container(
-                        width: 50,
-                        height: 40,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: HexColor('#40976C'),
-                            )),
-                        child: Center(
-                          child: Text(
-                            portinsNum.toString(),
-                            style: TextStyle(
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 7,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            portinsNum++;
-                            total = (totalAddOns + totalOptions)*portinsNum;
-                          });
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: HexColor('#40976C'),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '+',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      )
+                      Text('[' + translate('lan.optional') + ']',
+                          style: TextStyle(
+                              fontSize: MediaQuery.of(context).size.width / 30,
+                              color: HomePage.colorGrey)),
                     ],
                   ),
-                  //Submit
-                  InkWell(
-                    onTap: () => showCupertinoModalBottomSheet(
-                        expand: false,
-                        context: context,
-                        backgroundColor: Colors.white.withOpacity(0.7),
-                        builder: (context) {
-                          return StatefulBuilder(builder:
-                              (BuildContext context, StateSetter setState) {
-                            FocusScope.of(context).unfocus();
-                            return Container(
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(
-                                        MediaQuery.of(context).size.width / 25),
-                                    topRight: Radius.circular(
-                                        MediaQuery.of(context).size.width / 25),
-                                  ),
-                                ),
-                                child: Column(
-                                  //mainAxisSize: MainAxisSize.min,
-                                  //mainAxisAlignment: MainAxisAlignment.end,
-                                  children: <Widget>[
-                                    //ايقونة النزول
-                                    Container(
-                                      child: Row(
-                                        children: <Widget>[
-                                          Expanded(
-                                            child: Container(),
-                                          ),
-                                          Container(
-                                            child: CircleAvatar(
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  Navigator.of(context).pop();
-                                                },
-                                                child: Icon(
-                                                  Icons.expand_more,
-                                                  size: MediaQuery.of(context)
-                                                          .size
-                                                          .width /
-                                                      10,
-                                                  color: HomePage.colorGreen,
-                                                ),
-                                              ),
-                                              backgroundColor: Colors.transparent,
-                                              radius: MediaQuery.of(context)
-                                                      .size
-                                                      .width /
-                                                  25,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width /
-                                                20,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(15.0),
-                                        ),
-                                        padding: EdgeInsets.all(
-                                            MediaQuery.of(context).size.width /
-                                                35),
-                                        child: Container(
-                                          margin: new EdgeInsets.only(
-                                              left: MediaQuery.of(context)
-                                                      .size
-                                                      .width /
-                                                  15,
-                                              right: MediaQuery.of(context)
-                                                      .size
-                                                      .width /
-                                                  15),
-                                          child: ButtonTheme(
-                                            shape: new RoundedRectangleBorder(
-                                                borderRadius:
-                                                    new BorderRadius.circular(
-                                                        10.0)),
-                                            minWidth: 500.0,
-                                            height: MediaQuery.of(context)
-                                                    .size
-                                                    .width /
-                                                8,
-                                            child: RaisedButton(
-                                              child: Text(
-                                                  translate(
-                                                      'lan.etmamElshraa'),
-                                                  style: TextStyle(
-                                                      fontSize: MediaQuery.of(
-                                                                  context)
-                                                              .size
-                                                              .width /
-                                                          20,
-                                                      color: Colors.white)),
-                                              color: HomePage.colorGreen,
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                SendDataToServer(context);
-                                              },
-                                            ),
-                                          ),
-                                        ))
-                                  ],
-                                ));
-                          });
-                        }),
-                    child: Container(
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(15.0),
-                            color: HomePage.colorGreen),
-                        margin: EdgeInsets.all(
-                            MediaQuery.of(context).size.width / 15),
-                        padding: EdgeInsets.all(
-                            MediaQuery.of(context).size.width / 30),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                                child: Text(
-                              translate('lan.addToCard'),
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize:
-                                      MediaQuery.of(context).size.width / 24),
-                            )),
-                            // Expanded(child: Container()),
-                            // Container(
-                            //     child: Text("${AppLocalizations.of(context).rs} ",style: TextStyle(color:HomePage.colorYellow,fontSize: MediaQuery.of(context).size.width/25,fontWeight: FontWeight.bold),)),
-                          ],
-                        )),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 10),
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                        borderRadius: new BorderRadius.circular(20),
+                        border: Border.all(color: HexColor('#DDDDDD'))),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                          controller: tECNotes,
+                          keyboardType: TextInputType.multiline,
+                          maxLines: 5,
+                          decoration: InputDecoration.collapsed(
+                            hintText: translate('lan.leftYourNotes'),
+                            hintStyle: TextStyle(color: Colors.black),
+                          )),
+                    ),
                   ),
-                  const SizedBox(height: 30,)
-                ],
-              ),
-            )
+                ),
+
+                //Portions
+
+                SizedBox(
+                  height: 20,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      translate('lan.numOfOrders'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 25,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        if (portinsNum > 1)
+                          setState(() {
+                            portinsNum--;
+                            total = (totalAddOns + totalOptions) * portinsNum;
+                            widget.productTotal = null;
+                          });
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: HexColor('#40976C'),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '-',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 7,
+                    ),
+                    Container(
+                      width: 50,
+                      height: 40,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: HexColor('#40976C'),
+                          )),
+                      child: Center(
+                        child: Text(
+                          portinsNum.toString(),
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 7,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          portinsNum++;
+                          total = (totalAddOns + totalOptions) * portinsNum;
+                          widget.productTotal = null;
+                        });
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: HexColor('#40976C'),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '+',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+                //Submit
+                InkWell(
+                  onTap: () {
+                    if(widget.update!=null)
+                      removeProduct(widget.productID);
+                    else
+                    SendDataToServer();
+                  },
+                  // showCupertinoModalBottomSheet(
+                  // expand: false,
+                  // context: context,
+                  // backgroundColor: Colors.white.withOpacity(0.7),
+                  // builder: (context) {
+                  //   return StatefulBuilder(builder:
+                  //       (BuildContext context, StateSetter setState) {
+                  //     FocusScope.of(context).unfocus();
+                  //     return Container(
+                  //         height: 150,
+                  //         decoration: BoxDecoration(
+                  //           borderRadius: BorderRadius.only(
+                  //             topLeft: Radius.circular(
+                  //                 MediaQuery.of(context).size.width / 25),
+                  //             topRight: Radius.circular(
+                  //                 MediaQuery.of(context).size.width / 25),
+                  //           ),
+                  //         ),
+                  //         child: Column(
+                  //           //mainAxisSize: MainAxisSize.min,
+                  //           //mainAxisAlignment: MainAxisAlignment.end,
+                  //           children: <Widget>[
+                  //             //ايقونة النزول
+                  //             Container(
+                  //               child: Row(
+                  //                 children: <Widget>[
+                  //                   Expanded(
+                  //                     child: Container(),
+                  //                   ),
+                  //                   Container(
+                  //                     child: CircleAvatar(
+                  //                       child: GestureDetector(
+                  //                         onTap: () {
+                  //                           Navigator.of(context).pop();
+                  //                         },
+                  //                         child: Icon(
+                  //                           Icons.expand_more,
+                  //                           size: MediaQuery.of(context)
+                  //                               .size
+                  //                               .width /
+                  //                               10,
+                  //                           color: HomePage.colorGreen,
+                  //                         ),
+                  //                       ),
+                  //                       backgroundColor: Colors.transparent,
+                  //                       radius: MediaQuery.of(context)
+                  //                           .size
+                  //                           .width /
+                  //                           25,
+                  //                     ),
+                  //                   ),
+                  //                   SizedBox(
+                  //                     width: MediaQuery.of(context)
+                  //                         .size
+                  //                         .width /
+                  //                         20,
+                  //                   ),
+                  //                 ],
+                  //               ),
+                  //             ),
+                  //             Container(
+                  //                 decoration: BoxDecoration(
+                  //                   borderRadius:
+                  //                   BorderRadius.circular(15.0),
+                  //                 ),
+                  //                 padding: EdgeInsets.all(
+                  //                     MediaQuery.of(context).size.width /
+                  //                         35),
+                  //                 child: Container(
+                  //                   margin: new EdgeInsets.only(
+                  //                       left: MediaQuery.of(context)
+                  //                           .size
+                  //                           .width /
+                  //                           15,
+                  //                       right: MediaQuery.of(context)
+                  //                           .size
+                  //                           .width /
+                  //                           15),
+                  //                   child: ButtonTheme(
+                  //                     shape: new RoundedRectangleBorder(
+                  //                         borderRadius:
+                  //                         new BorderRadius.circular(
+                  //                             10.0)),
+                  //                     minWidth: 500.0,
+                  //                     height: MediaQuery.of(context)
+                  //                         .size
+                  //                         .width /
+                  //                         8,
+                  //                     child: RaisedButton(
+                  //                       child: Text(
+                  //                           translate(
+                  //                               'lan.etmamElshraa'),
+                  //                           style: TextStyle(
+                  //                               fontSize: MediaQuery.of(
+                  //                                   context)
+                  //                                   .size
+                  //                                   .width /
+                  //                                   20,
+                  //                               color: Colors.white)),
+                  //                       color: HomePage.colorGreen,
+                  //                       onPressed: () {
+                  //                         Navigator.pop(context);
+                  //                         SendDataToServer(context);
+                  //                       },
+                  //                     ),
+                  //                   ),
+                  //                 ))
+                  //           ],
+                  //         ));
+                  //   });
+                  // }),
+                  child: Container(
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15.0),
+                          color: HomePage.colorGreen),
+                      margin: EdgeInsets.all(
+                          MediaQuery.of(context).size.width / 15),
+                      padding: EdgeInsets.all(
+                          MediaQuery.of(context).size.width / 30),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                              child: Text(
+                            translate('lan.addToCard'),
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize:
+                                    MediaQuery.of(context).size.width / 24),
+                          )),
+                          // Expanded(child: Container()),
+                          // Container(
+                          //     child: Text("${AppLocalizations.of(context).rs} ",style: TextStyle(color:HomePage.colorYellow,fontSize: MediaQuery.of(context).size.width/25,fontWeight: FontWeight.bold),)),
+                        ],
+                      )),
+                ),
+                const SizedBox(
+                  height: 30,
+                )
+              ],
+            ),
+            loading
+                ? Container(
+                    height: double.infinity,
+                    width: double.infinity,
+                    color: Colors.white.withOpacity(0.6),
+                    child: Center(
+                      child: Container(
+                        height: 100,
+                        width: 100,
+                        child: Lottie.asset(
+                          'assets/images/lf20_mvihowzk.json',
+                          fit: BoxFit.fill,
+                          height: 100,
+                          width: 100,
+                        ),
+                      ),
+                    ),
+                  )
+                : Container()
           ],
         ),
       ),
     );
   }
 
+  Future SendDataToServer({String token}) async {
+    final prefs = await SharedPreferences.getInstance();
+  token = prefs.getString('token');
 
-  Future SendDataToServer(BuildContext context) async {
+
     var listOptions = [];
     for (int i = 0; i < allOptions.length; i++) {
-
       if (allOptions[i].isSelected) {
         listOptions.add(allOptions[i].id);
       }
@@ -805,19 +951,28 @@ class _ProductDetailsState extends State<ProductDetails> {
       }
     }
 
-    var response;
+    //
+    // print(token.toString()+'hhhhhhh');
+    // print(vendorID);
+    // print(productDetailsModel.id);
+    // print(portinsNum);
+    // print(listOptions);
+    // print(listAddons);
 
-    print(token);
-    print(vendorID);
-    print(productDetailsModel.id);
-    print(portinsNum);
-    print(listOptions);
-    print(listAddons);
-    print(cardToken.length);
+    setState(() {
+      loading = true;
+    });
+    if (cardToken == "" || cardToken == null ) {
+      prefs.setInt('counter', 1);
+      setState(() {
+        prefs.setInt('counter', 1);
+        counter = 1;
+      });
 
-    if (cardToken == "" || cardToken == null) {
-
-      response = await http.post("${HomePage.URL}cart/add_product", body: {
+    var  response = await http.post("${HomePage.URL}cart/add_product", headers: {
+        "Content-Language": lan,
+        "Authorization": "Bearer $token",
+      }, body: {
         "vendor_id": "$vendorID",
         "product_id": "${productDetailsModel.id}",
         "quantity": "$portinsNum",
@@ -825,106 +980,52 @@ class _ProductDetailsState extends State<ProductDetails> {
         "addons": "$listAddons",
         "note": "${tECNotes.text}",
       });
-      print('sdkufgdslkuf');
       var dataOrder = json.decode(response.body);
-      displayToastMessage("${dataOrder['message']}");
-
+      log(dataOrder.toString());
       if ("${dataOrder['success']}" == "1") {
-        print("LLLLLLLLLLLLLLLLL ${dataOrder['cart']['token']}");
         saveDataInSharedPref(context, dataOrder['cart']['token']);
       }
-    }
-    else {
-      print('llllllllllpppppppppppppppp');
-      response = await http.post("${HomePage.URL}cart/add_product", body: {
+    } else {
+      print('CarToken'+cardToken.toString());
+      var  response = await http.post("${HomePage.URL}cart/add_product", headers: {
+        "Content-Language": lan,
+        "Authorization": "Bearer $token",
+      }, body: {
         "vendor_id": "$vendorID",
         "product_id": "${productDetailsModel.id}",
         "quantity": "$portinsNum",
-        "cart_token": cardToken,
         "options": "$listOptions",
         "addons": "$listAddons",
         "note": "${tECNotes.text}",
-
+        "cart_token": cardToken,
       });
-      var dataOrder = json.decode(response.body);
+      // var dataOrder = json.decode(response.body);
+      // var dataOrder = json.decode(response.body);
 
+      print(token.toString()+'hhhhhhh');
+      print('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvd29ybGRhcHAuc2l0ZVwvYXBpXC9hdXRoXC92ZXJpZnkiLCJpYXQiOjE2MzM5NDExMjgsImV4cCI6NTI2NTQ3NzEyOCwibmJmIjoxNjMzOTQxMTI4LCJqdGkiOiJFV0ZhSkZVNzM4d1FTdTJ6Iiwic3ViIjoxNjcsInBydiI6ImE1YmI5ODE5OGJiNDNkYTZiNDU3NDljMDQ3NTljODFjMTIyNDMzYzEifQ.sWfqJXYvL7WhmqD3RwcbGenyW1JdrvpzsT3vUUK0wOY');
+      print(vendorID);
+      print(productDetailsModel.id);
+      print(portinsNum);
+      print(listOptions);
+      print(listAddons);
       print("Card Token => $cardToken");
-
-      if ("${dataOrder['success']}" == "1") {
-        goToMyCard();
-      }
+      print(response.body.toString());
+      // displayToastMessage(dataOrder['success']);
+      // if ("${dataOrder['success']}" == "1") {
+      //   setState(() {
+      //     prefs.setInt('counter', dataOrder['cart']['items_count']);
+      //     counter = dataOrder['cart']['items_count'];
+      //   });
+      //   displayToastMessage(translate('lan.addedSuccessfully'));
+      //   goToMyCard();
+      // }
     }
   }
-  // Future SendDataToServer(BuildContext context) async {
-  //   var listOptions = [];
-  //   for(int i=0;i<allOptions.length;i++){
-  //     if(allOptions[i].isSelected){
-  //       listOptions.add(allOptions[i].id);
-  //     }
-  //   }
-  //
-  //   if(allOptions.length>0){
-  //     if(listOptions.length==0){
-  //       displayToastMessage(translate('lan.pleaseChooseSize'));
-  //       return;
-  //     }
-  //   }
-  //
-  //   var listAddons = [];
-  //   for(int i=0;i<allAddons.length;i++){
-  //     if(allAddons[i].isSelected){
-  //       listAddons.add(allAddons[i].id);
-  //     }
-  //   }
-  //
-  //   var response;
-  //   if(cardToken==""||cardToken==null){
-  //     response = await http.post("${HomePage.URL}cart/add_product",body: {
-  //       "vendor_id": "$vendorID",
-  //       "product_id": "${productDetailsModel.id}",
-  //       "quantity": "$portinsNum",
-  //       "options": "$listOptions",
-  //       "addons": "$listAddons",
-  //       "note": "${tECNotes.text}",
-  //     });
-  //
-  //     var dataOrder = json.decode(response.body);
-  //     displayToastMessage("${dataOrder['message']}");
-  //
-  //     if("${dataOrder['success']}"=="1"){
-  //       print("LLLLLLLLLLLLLLLLL ${dataOrder['cart']['token']}");
-  //       saveDataInSharedPref(context,dataOrder['cart']['token']);
-  //
-  //     }
-  //   }else{
-  //
-  //     response = await http.post("${HomePage.URL}cart/add_product",body: {
-  //       "vendor_id": "$vendorID",
-  //       "product_id": "${productDetailsModel.id}",
-  //       "quantity": "$portinsNum",
-  //       "cart_token": cardToken,
-  //       "options": "$listOptions",
-  //       "addons": "$listAddons",
-  //       "note": "${tECNotes.text}",
-  //     });
-  //     var dataOrder = json.decode(response.body);
-  //
-  //     print("Card Token => $cardToken");
-  //
-  //     if("${dataOrder['success']}"=="1"){
-  //       goToMyCard();
-  //     }
-  //   }
-  //
-  //
-  //
-  //
-  // }
 
   void saveDataInSharedPref(BuildContext context, cardTokenP) async {
     final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setString('cardToken', cardTokenP);
+    prefs.setString('cardToken', cardTokenP);
     setState(() {
       cardToken = cardTokenP;
     });
@@ -933,11 +1034,22 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   goToMyCard() {
     if (isLogin) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => Card1()),
-      );
+      if (widget.update != null) {
+        displayToastMessage(translate('lan.updated'));
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => Card1()));
+      } else {
+        displayToastMessage(translate('lan.addedSuccessfully'));
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Products(
+                      vendorID: vendorID,
+                      catID: widget.catID,
+                    )));
+      }
     } else {
+      displayToastMessage(translate('lan.signInToAddProduct'));
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => Login()),
@@ -951,11 +1063,31 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        textColor: Colors.white,
-        fontSize: 16.0);
+    // Fluttertoast.showToast(
+    //     msg: toastMessage.toString(),
+    //     toastLength: Toast.LENGTH_SHORT,
+    //     gravity: ToastGravity.BOTTOM,
+    //     textColor: Colors.white,
+    //     fontSize: 16.0);
+
+    showSimpleNotification(
+      Container(
+        height: 50,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(
+            toastMessage,
+            style: TextStyle(
+                color: Colors.black,
+                fontSize: 18,
+                fontFamily: 'Tajawal',
+                fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+      duration: Duration(seconds: 2),
+      background: HomePage.colorYellow,
+      position: NotificationPosition.bottom,
+    );
   }
 }

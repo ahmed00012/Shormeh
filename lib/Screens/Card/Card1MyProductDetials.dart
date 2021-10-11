@@ -1,12 +1,13 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:lottie/lottie.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/CardModel1.dart';
 import 'package:http/http.dart' as http;
@@ -32,7 +33,10 @@ class _Card1State extends State<Card1> {
   String lan = '';
   int translationLanguage = 0;
   int cardItems = 0;
-
+  String option = '';
+  List<String> addOn = [];
+  String token = '';
+  int counter;
   @override
   void initState() {
     // TODO: implement initState
@@ -44,61 +48,91 @@ class _Card1State extends State<Card1> {
     final prefs = await SharedPreferences.getInstance();
     final _cardToken = prefs.getString("cardToken");
     final _translateLanguage = prefs.getInt('translateLanguage');
-    final _cardItems = prefs.getInt('cardItems');
+    final _token = prefs.getString("token");
+    final _counter = prefs.getInt("counter");
 
     if (_cardToken != null) {
       setState(() {
+        _translateLanguage == 1 ? lan = 'ar' : lan = 'en';
         cardToken = _cardToken;
-      });
-    }
-
-    if (_cardItems != null) {
-      setState(() {
-        cardItems = _cardItems;
+        token = _token;
       });
     }
 
     getMyCardProducts();
 
     setState(() {
+      _counter == null ? counter = 0 : counter = _counter;
       translationLanguage = _translateLanguage;
     });
   }
 
   Future getMyCardProducts() async {
     allMyCardProducts.clear();
-    final prefs = await SharedPreferences.getInstance();
-    var response = await http.get("${HomePage.URL}cart/get_cart/$cardToken");
 
-    var dataMyCardProducts = json.decode(response.body).cast<String, dynamic>();
+    print(token);
 
-    print(dataMyCardProducts);
+    if (cardToken == '') {
+      cardItems = 0;
+      isIndicatorActive = false;
+    } else {
+      var response =
+          await http.get("${HomePage.URL}cart/get_cart/$cardToken", headers: {
+        // "Authorization": "Bearer $token",
+        "Content-Language": lan,
+      });
 
-    setState(() {
-      if (dataMyCardProducts['items'] != null) {
+      var dataMyCardProducts = json.decode(response.body);
+
+      log(dataMyCardProducts.toString());
+
+      setState(() {
+        cardItems = dataMyCardProducts['data']['items'].length;
+        for (int i = 0; i < dataMyCardProducts['data']['items'].length; i++) {
+          addOn = [];
+
+          for (int j = 0;
+              j <
+                  dataMyCardProducts['data']['items'][i]['cartitemaddon']
+                      .length;
+              j++) {
+            lan == 'en'
+                ? addOn.add(dataMyCardProducts['data']['items'][i]
+                    ['cartitemaddon'][j]['addon']['name_en'])
+                : addOn.add(dataMyCardProducts['data']['items'][i]
+                    ['cartitemaddon'][j]['addon']['name_ar']);
+          }
+
+          allMyCardProducts.add(new Card1Model(
+            dataMyCardProducts['data']['id'],
+            dataMyCardProducts['data']['sub_total'],
+            "${dataMyCardProducts['data']['tax']}",
+            "${dataMyCardProducts['data']['total']}",
+            "${dataMyCardProducts['data']['delivery_fee']}",
+            "${dataMyCardProducts['data']['points_to_cash']}",
+            "${dataMyCardProducts['data']['discount']}",
+            dataMyCardProducts['data']['items'][i]['product_id'],
+            dataMyCardProducts['data']['items'][i]['product_name'],
+            dataMyCardProducts['data']['items'][i]['product_image'],
+            dataMyCardProducts['data']['items'][i]['total'].toString(),
+            dataMyCardProducts['data']['items'][i]['count'],
+            false,
+            option: dataMyCardProducts['data']['items'][i]['cartitemoption']
+                        .length ==
+                    0
+                ? ''
+                : dataMyCardProducts['data']['items'][i]['cartitemoption'][0]
+                    ['optionvalue']['name_en'],
+            addOn: addOn,
+            notes: dataMyCardProducts['data']['items'][i]['note'] == null
+                ? ''
+                : dataMyCardProducts['data']['items'][i]['note'],
+          ));
+        }
 
         isIndicatorActive = false;
-        for (int i = 0; i < dataMyCardProducts['items'].length; i++) {
-          allMyCardProducts.add(new Card1Model(
-              dataMyCardProducts['id'],
-              dataMyCardProducts['sub_total'],
-              "${dataMyCardProducts['tax']}",
-              "${dataMyCardProducts['total']}",
-              "${dataMyCardProducts['delivery_fee']}",
-              "${dataMyCardProducts['points_to_cash']}",
-              "${dataMyCardProducts['discount']}",
-              dataMyCardProducts['items'][i]['product_id'],
-              dataMyCardProducts['items'][i]['product_name'],
-              dataMyCardProducts['items'][i]['product_image'],
-              dataMyCardProducts['items'][i]['total'].toString(),
-              dataMyCardProducts['items'][i]['count'],
-              false));
-        }
-      }
-      prefs.setInt('cardItems', allMyCardProducts.length);
-      cardItems = allMyCardProducts.length;
-      isIndicatorActive = false;
-    });
+      });
+    }
   }
 
   void removeProduct(int id) async {
@@ -108,8 +142,13 @@ class _Card1State extends State<Card1> {
       isIndicatorActive = true;
     });
 
-
-    var respons = await http.post("${HomePage.URL}cart/remove_product", body: {
+    print(id);
+    print(cardToken);
+    var respons =
+        await http.post("${HomePage.URL}cart/remove_product", headers: {
+      "Content-Language": lan,
+      "Authorization": "Bearer $token",
+    }, body: {
       "product_id": "$id",
       "cart_token": "$cardToken",
     });
@@ -117,17 +156,20 @@ class _Card1State extends State<Card1> {
     print(data);
     if (data['success'] == "1") {
       displayToastMessage("${data['message']}");
-      getMyCardProducts();
+
       setState(() {
         isIndicatorActive = false;
         cardItems--;
-        prefs.setInt('cardItems', cardItems);
+        prefs.setInt("counter", counter - 1);
       });
       if (cardItems == 0) {
         setState(() {
+          cardToken = '';
           prefs.setString('cardToken', '');
+          prefs.setInt("counter", 0);
         });
       }
+      getMyCardProducts();
     } else {
       displayToastMessage("${data['message']}");
       setState(() {
@@ -138,49 +180,62 @@ class _Card1State extends State<Card1> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection:   lan == 'ar'?TextDirection.rtl:TextDirection.ltr,
-      child: Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          title: Text(
-            translate('lan.saltElshraa'),
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Tajawal'),
-          ),
-          backgroundColor: HexColor('#40976c'),
-          elevation: 5.0,
-          leading: GestureDetector(
-            onTap: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>HomePage(isHomeScreen: true,)));
-            },
-            child: Icon(Icons.arrow_back_ios,color: Colors.white,),
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(
+          translate('lan.saltElshraa'),
+          style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Tajawal'),
+        ),
+        backgroundColor: HexColor('#40976c'),
+        elevation: 5.0,
+        leading: GestureDetector(
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HomePage(
+                          isHomeScreen: true,
+                        )));
+          },
+          child: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
           ),
         ),
-        body: isIndicatorActive
-            ? Container(
-          color: Colors.white,
-          child: Center(
-              child:Container(
-                height: 80,
-                width: 80,
-                child: Lottie.asset('assets/images/lf20_8tcvbixe.json'),
-              )
-          ),
-        )
-            : cardItems == 0
-                ? Center(
-                    child: Text(
+      ),
+      body: isIndicatorActive
+          ? Center(
+              child: Container(
+              height: 100,
+              width: 100,
+              child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+            ))
+          : cardItems == 0
+              ? Center(
+                  child: Column(
+                  children: [
+                    SizedBox(
+                      height: 100,
+                    ),
+                    Lottie.asset('assets/images/lf20_snkgifgm.json',
+                        height: 300, width: 300, fit: BoxFit.cover),
+                    Text(
                       translate('lan.saltElshraaFargaa'),
                       style: TextStyle(
                           fontSize: MediaQuery.of(context).size.width / 25,
                           color: Colors.black,
                           fontFamily: 'Tajawal'),
-                    ),
-                  )
-                : Column(
+                    )
+                  ],
+                ))
+              : Directionality(
+                  textDirection:
+                      lan == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                  child: Column(
                     children: [
                       Expanded(
                         flex: 9,
@@ -195,7 +250,7 @@ class _Card1State extends State<Card1> {
                                 MediaQuery.of(context).size.width / 50),
                             itemBuilder: (BuildContext context, int index) {
                               return Container(
-                                  height: 70,
+                                  color: HexColor('#F2F2F2'),
                                   margin: EdgeInsets.fromLTRB(
                                       MediaQuery.of(context).size.width / 50,
                                       MediaQuery.of(context).size.width / 100,
@@ -209,58 +264,184 @@ class _Card1State extends State<Card1> {
                                   child: Slidable(
                                     actionPane: SlidableDrawerActionPane(),
                                     actionExtentRatio: 0.25,
-                                    child: new Container(
-                                      color: HexColor('#F2F2F2'),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: ListTile(
-                                              leading: CircleAvatar(
-                                                backgroundImage: NetworkImage(
-                                                  ' ${allMyCardProducts[index].productImage}'
-                                                      .replaceAll(' ', ''),
-                                                ),
-                                                radius: 25,
-                                                backgroundColor: Colors.black12,
-                                              ),
-                                              title: new Text(
-                                                "${allMyCardProducts[index].productName}",
-                                                style: TextStyle(
-                                                    fontFamily: 'Tajawal'),
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                                right: 8.0),
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  '${allMyCardProducts[index].productPrice} ' +
-                                                      translate('lan.rs'),
-                                                  style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontFamily: 'Tajawal'),
-                                                ),
-                                                SizedBox(
-                                                  height: 5,
-                                                ),
-                                                Text(
-                                                    '${allMyCardProducts[index].count} ' +
-                                                        ' : ' +
-                                                        translate('lan.pieces'),
-                                                    style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontFamily: 'Tajawal',
-                                                        color: HexColor(
-                                                            '#40976C')))
-                                              ],
-                                            ),
-                                          )
-                                        ],
+                                    child: ExpansionTile(
+                                      iconColor: HexColor('#40976c'),
+                                      textColor: HexColor('#40976c'),
+                                      title: Text(
+                                        "${allMyCardProducts[index].productName}" ??
+                                            '',
+                                        style: TextStyle(fontFamily: 'Tajawal'),
                                       ),
+                                      leading: CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                          ' ${allMyCardProducts[index].productImage}'
+                                              .replaceAll(' ', ''),
+                                        ),
+                                        radius: 25,
+                                        backgroundColor: Colors.black12,
+                                      ),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: 20, top: 10),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      translate('lan.count'),
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '${allMyCardProducts[index].count} ',
+                                                    style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontFamily: 'Tajawal'),
+                                                  ),
+                                                ],
+                                              ),
+                                              Divider(),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      translate('lan.size'),
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '${allMyCardProducts[index].option} ',
+                                                    style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontFamily: 'Tajawal'),
+                                                  ),
+                                                ],
+                                              ),
+                                              Divider(),
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      translate('lan.addons'),
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    child: Align(
+                                                      alignment:
+                                                          Alignment.centerRight,
+                                                      child: ListView.builder(
+                                                        shrinkWrap: true,
+                                                        physics:
+                                                            NeverScrollableScrollPhysics(),
+                                                        itemCount:
+                                                            allMyCardProducts[
+                                                                    index]
+                                                                .addOn
+                                                                .length,
+                                                        itemBuilder:
+                                                            (context, i) {
+                                                          print(allMyCardProducts[
+                                                                      index]
+                                                                  .addOn
+                                                                  .toString() +
+                                                              ';ttttt');
+                                                          // print(addOn);
+                                                          return Text(
+                                                            allMyCardProducts[
+                                                                    index]
+                                                                .addOn[i],
+                                                            textAlign:
+                                                                TextAlign.end,
+                                                            style: TextStyle(
+                                                                fontSize: 16,
+                                                                fontFamily:
+                                                                    'Tajawal'),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  )
+                                                ],
+                                              ),
+                                              Divider(),
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      translate('lan.notes'),
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    width:
+                                                        MediaQuery.of(context)
+                                                                .size
+                                                                .width *
+                                                            0.5,
+                                                    child: Text(
+                                                      '${allMyCardProducts[index].notes} ',
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                      maxLines: 3,
+                                                      textAlign: lan == "en"
+                                                          ? TextAlign.right
+                                                          : TextAlign.left,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Divider(),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      translate('lan.total'),
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    width: 60,
+                                                    child: Text(
+                                                      '${allMyCardProducts[index].productPrice} ' +
+                                                          translate('lan.rs'),
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontFamily:
+                                                              'Tajawal'),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      ],
                                     ),
                                     secondaryActions: <Widget>[
                                       new IconSlideAction(
@@ -271,11 +452,21 @@ class _Card1State extends State<Card1> {
                                           color: Colors.white,
                                         ),
                                         onTap: () {
-                                          print(allMyCardProducts[index].id);
-                                         Navigator.push(context, MaterialPageRoute(builder: (context)=>ProductDetails(
-                                           productID:allMyCardProducts[index].productId,
-                                           productTotal: allMyCardProducts[index].productPrice,
-                                         )));
+                                          Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ProductDetails(
+                                                        productID:
+                                                            allMyCardProducts[
+                                                                    index]
+                                                                .productId,
+                                                        productTotal:
+                                                            allMyCardProducts[
+                                                                    index]
+                                                                .productPrice,
+                                                        update: true,
+                                                      )));
                                         },
                                       ),
                                       new IconSlideAction(
@@ -308,7 +499,7 @@ class _Card1State extends State<Card1> {
                                   shape: new RoundedRectangleBorder(
                                       borderRadius:
                                           new BorderRadius.circular(10.0)),
-                                  height: MediaQuery.of(context).size.width / 8,
+                                  height: 50,
                                   child: RaisedButton(
                                     child: Text(translate('lan.sendOrder'),
                                         style: TextStyle(
@@ -338,7 +529,7 @@ class _Card1State extends State<Card1> {
                                   shape: new RoundedRectangleBorder(
                                       borderRadius:
                                           new BorderRadius.circular(10.0)),
-                                  height: MediaQuery.of(context).size.width / 8,
+                                  height: 50,
                                   child: RaisedButton(
                                     child: Text(translate('lan.addMore'),
                                         style: TextStyle(
@@ -376,16 +567,32 @@ class _Card1State extends State<Card1> {
                             ),
                     ],
                   ),
-      ),
+                ),
     );
   }
 
   void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        textColor: Colors.white,
-        fontSize: 16.0);
+    // Fluttertoast.showToast(
+    //     msg: toastMessage.toString(),
+    //     toastLength: Toast.LENGTH_SHORT,
+    //     gravity: ToastGravity.BOTTOM,
+    //     textColor: Colors.white,
+    //     fontSize: 16.0);
+    showSimpleNotification(
+        Container(
+          height: 50,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              toastMessage,
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        duration: Duration(seconds: 3),
+        background: HomePage.colorYellow);
   }
 }

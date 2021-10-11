@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+
 import 'package:hexcolor/hexcolor.dart';
+import 'package:lottie/lottie.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:shormeh/Models/CardModel1.dart';
@@ -13,9 +15,14 @@ import 'package:shormeh/Screens/Card/Card3OrderDetails.dart';
 import 'package:shormeh/Screens/Card/OrderHome/AddAddress.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 
+import '../Card2MyAllProductsDetails.dart';
+
 
 class AdressList extends StatefulWidget {
-  @override
+  bool added;
+
+  AdressList({this.added});
+    @override
   _AdressListState createState() => _AdressListState();
 }
 
@@ -29,7 +36,8 @@ class _AdressListState extends State<AdressList> {
 
   String cardToken="";
   String token="";
-
+  String method;
+  bool loading= false;
   @override
   void initState() {
     // TODO: implement initState
@@ -65,6 +73,7 @@ class _AdressListState extends State<AdressList> {
            dataMyadress[i]['id'],
            "${dataMyadress[i]['district']}",
            "${dataMyadress[i]['address']}",
+             false
          ));
        }
 
@@ -77,135 +86,184 @@ class _AdressListState extends State<AdressList> {
 
   }
 
-  onBackPressed(BuildContext context) {
-    Navigator.of(context).pop();
-  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar:  new AppBar(
         centerTitle: true,
         backgroundColor:  HexColor('#40976c'),
         elevation: 5.0,
         title: Container(
-          child: Text(translate('lan.enwany'),style: TextStyle(fontSize: MediaQuery.of(context).size.width/25),),
+          child: Text(translate('lan.enwany'),),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios,size: MediaQuery.of(context).size.width/15,),
+          icon: Icon(Icons.arrow_back_ios),
           onPressed:(){
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (c) => HomePage(isHomeScreen: true,)),
-            );
+            if(widget.added!=null) {
+              int count = 0;
+              Navigator.popUntil(context, (route) {
+                return count++ == 2;
+              });
+            }
+            else
+     Navigator.pop(context);
+
           },
         ),
       ),
-      body: Container(
-        height: MediaQuery.of(context).size.height,
-        color: Colors.white,
-        child:isIndicatorActive?Center(child: CircularProgressIndicator(),):
-        Column(
+      body: WillPopScope(
+        onWillPop: (){
+          if(widget.added!=null) {
+            int count = 0;
+            Navigator.popUntil(context, (route) {
+              return count++ == 2;
+            });
+          }
+          else
+            Navigator.pop(context);
+
+        },
+        child: Stack(
           children: [
-            Expanded(
-              flex: 9,
-              child: ListView.builder(
-                  shrinkWrap : true,
-                  physics: ScrollPhysics(),
-                  itemCount: allOrderToHome.length,
-                  padding: EdgeInsets.fromLTRB(0.0,MediaQuery.of(context).size.width/50,0.0,MediaQuery.of(context).size.width/50),
+            Container(
+              height: MediaQuery.of(context).size.height,
+              color: Colors.white,
+              child: isIndicatorActive
+                  ? Center(
+                  child:Container(
+                    height: 80,
+                    width: 80,
+                    child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+                  )
+              )
+                  :
+              Column(
+                children: [
+                  Expanded(
+                    child: allOrderToHome.length==0?
+              Center(child:Lottie.asset('assets/images/lf20_9ery8csf.json',height: 150,width: 150),):ListView.builder(
+                        shrinkWrap : true,
+                        physics: ScrollPhysics(),
+                        itemCount: allOrderToHome.length,
+                        padding: EdgeInsets.fromLTRB(0.0,MediaQuery.of(context).size.width/50,0.0,MediaQuery.of(context).size.width/50),
 
-                  itemBuilder: (BuildContext context, int index) {
-                    return InkWell(
-                      onTap: (){
-                        setCatAndGetMyCardProducts(allOrderToHome[index].id);
-                      },
-                      child: Container(
-                        margin: EdgeInsets.fromLTRB(
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100,
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100),
-                        padding: EdgeInsets.fromLTRB(
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100,
-                            MediaQuery.of(context).size.width/50,
-                            MediaQuery.of(context).size.width/100
-                        ),
-                        child: IntrinsicHeight(
-                          child: Row(children: <Widget>[
-                            //Checkbox
-                            //Name
-                            Expanded(
+                        itemBuilder: (BuildContext context, int index) {
+                          return InkWell(
+                            onTap: (){
+                              setState(() {
+                                loading = true;
+                                method =allOrderToHome[index].address;
+                                allOrderToHome.forEach((element) {element.choosed = false;});
+                                allOrderToHome[index].choosed = true;
+                              });
+                              if(loading = true)
+                              setCatAndGetMyCardProducts(allOrderToHome[index].id);
+                            },
+                            child:Padding(
+                              padding: const EdgeInsets.all(8.0),
                               child: Container(
-                                  padding: EdgeInsets.all(MediaQuery.of(context).size.width/30),
-                                  child: Text("${allOrderToHome[index].address}",
-                                    style:TextStyle(fontWeight: FontWeight.bold,fontSize: MediaQuery.of(context).size.width/25),)),
-                            ),
-
-                            InkWell(
-                              onTap:(){
-                                // Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(builder: (context) => OrderDetails(allOrderToHome:allOrderToHome)),
-                                // );
-                              },
-                              child: Container(
-                                width: MediaQuery.of(context).size.width/7,
-                                alignment: Alignment.center,
+                                width: double.infinity,
+                                height: 55,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(Radius.circular(15)),
-                                  color: HomePage.colorGrey,
-
+                                  border: Border.all(
+                                      width: 1.0,
+                                      color: allOrderToHome[index].choosed? HexColor('#40976c'):Colors.black12),
+                                  borderRadius: BorderRadius.all(
+                                      Radius.circular(
+                                          5.0) //                 <--- border radius here
+                                  ),
                                 ),
-                                child: Icon(Icons.edit,color: Colors.white,),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(
+                                      width: 10,
+                                    ),
+                                    Radio<String>(
+                                      value: allOrderToHome[index].address,
+                                      groupValue: method,
+                                      onChanged: (value) {
+                                        setCatAndGetMyCardProducts(allOrderToHome[index].id);
+                                        setState(() {
+                                          loading = true;
+                                          method = value;
+                                          allOrderToHome.forEach((element) {element.choosed = false;});
+                                          allOrderToHome[index].choosed = true;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(
+                                      width: 5,
+                                    ),
+                                    Text(allOrderToHome[index].address,
+                                      style: TextStyle(fontSize: 18),)
+                                  ],
+                                ),
                               ),
                             ),
-
-                          ],),
-                        ),),
-                    );
-                  }),
-            ),
-            Expanded(
-              flex: 1,
-              child : Container(
-                width: 250,
-                margin: EdgeInsets.all(MediaQuery.of(context).size.width/30),
-                child:  ButtonTheme(
-                  shape: new RoundedRectangleBorder(
-                      borderRadius: new BorderRadius.circular(10.0)),
-                  height: MediaQuery.of(context).size.width/8,
-                  child: RaisedButton(
-                    child: Text(
-                       translate('lan.adfEnwanAkhr'),
-                        style:TextStyle(fontSize:  MediaQuery.of(context).size.width/25,color: Colors.white)
-                    ),
-                    color: HomePage.colorGreen,
-                    onPressed: () {
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => AddAddress()),
-                      );
-
-                    },
+                          );
+                        }),
                   ),
+                  Container(
+                    width: 250,
+                    height: 50,
+                    child:  ButtonTheme(
+                      shape: new RoundedRectangleBorder(
+                          borderRadius: new BorderRadius.circular(10.0)),
+                      height:50,
+                      child: RaisedButton(
+                        child: Text(
+                            translate('lan.addAdress'),
+                            style:TextStyle(fontSize:  MediaQuery.of(context).size.width/25,color: Colors.white)
+                        ),
+                        color: HomePage.colorGreen,
+                        onPressed: () {
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => AddAddress()),
+                          );
+
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30,)
+                ],
+              ),
+            ),
+            loading? Container(height: double.infinity,
+              width: double.infinity,
+              color: Colors.white.withOpacity(0.6),
+              child: Center(
+                child: Container(
+                  height: 100,
+                  width: 100,
+                  child: Lottie.asset('assets/images/lf20_mvihowzk.json',fit: BoxFit. fill,height: 100,
+                    width: 100,),
+
                 ),
               ),
-            )
+            ):
+             Container()
           ],
-        ),
+      ),
       ),
     );
 
   }
   Future setCatAndGetMyCardProducts(int idAddress) async  {
 
-
+setState(() {
+  loading = true;
+});
     print("$idAddress");
     print("$cardToken");
     var response = await http.post("${HomePage.URL}cart/choose_address",
         headers: {
-          'Authorization':'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC8xMjcuMC4wLjE6ODAwMFwvYXBpXC9hdXRoXC9sb2dpbiIsImlhdCI6MTYyNTExOTI1MSwiZXhwIjo1MjU2NjU1MjUxLCJuYmYiOjE2MjUxMTkyNTEsImp0aSI6InJsM3o3MnczTmdNS0pLbXEiLCJzdWIiOjEsInBydiI6ImE1YmI5ODE5OGJiNDNkYTZiNDU3NDljMDQ3NTljODFjMTIyNDMzYzEifQ.2aQaThLvKuK3K0lcgvmb_qef1JsagE9Rl52zuuW9NS0',
+          'Authorization':'Bearer $token',
         },body: {
           'address_id':'$idAddress',
           'cart_token': "$cardToken",
@@ -223,15 +281,33 @@ class _AdressListState extends State<AdressList> {
     }else{
       displayToastMessage("${dataOrderDetails['message']}");
     }
+setState(() {
+  loading = false;
+});
 
   }
+
   void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        textColor: Colors.white,
-        fontSize: 16.0
+    // Fluttertoast.showToast(
+    //     msg: toastMessage.toString(),
+    //     toastLength: Toast.LENGTH_SHORT,
+    //     gravity: ToastGravity.BOTTOM,
+    //     textColor: Colors.white,
+    //     fontSize: 16.0
+    // );
+    showSimpleNotification(
+        Container(height: 50,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(toastMessage,
+              style: TextStyle(color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),),
+          ),
+        ),
+        duration: Duration(seconds: 3),
+        background:HomePage.colorYellow
+
     );
   }
 }

@@ -7,9 +7,11 @@ class ProductsModel{
   String nameAr;
   String nameEn;
   String price;
+  int liked;
 
 
-  ProductsModel(this.id, this.image,this.mainName, this.nameAr, this.nameEn,this.price);
+
+  ProductsModel(this.id, this.image,this.mainName, this.nameAr, this.nameEn,this.price,this.liked);
 
 
   factory ProductsModel.fromJson(Map<String, dynamic> json) => ProductsModel(
@@ -19,6 +21,7 @@ class ProductsModel{
     json['translations'][0]['name'],
     json['translations'][1]['name'],
     json["price"],
+    json["in_favourite"]
 
   );
 }

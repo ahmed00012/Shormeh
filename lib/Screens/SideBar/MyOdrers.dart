@@ -1,11 +1,18 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hexcolor/hexcolor.dart';
+import 'package:lottie/lottie.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shormeh/Models/Addon.dart';
+import 'package:shormeh/Models/Options.dart';
 import 'package:shormeh/Models/OrderModel.dart';
 import 'package:shormeh/Models/OrderModel2.dart';
+import 'package:shormeh/Screens/Card/Card1MyProductDetials.dart';
 import 'package:shormeh/Screens/Card/Card5OdrerStatus.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 import 'package:http/http.dart' as http;
@@ -22,9 +29,14 @@ class _MyOrdersState extends State<MyOrders> {
 
   bool isIndicatorActive = true;
   String lan='';
-
+  String cardToken = "";
   String token = "";
-
+  int vendorID;
+  List<int> allAddons = [];
+  List<int> allOptions = [];
+  int portinsNum = 1;
+  String tECNotes ='';
+int orders;
   @override
   void initState() {
     // TODO: implement initState
@@ -41,6 +53,7 @@ class _MyOrdersState extends State<MyOrders> {
     setState(() {
       token = _token;
       _translateLanguage == 0 ?lan = 'en':lan='ar';
+      cardToken=_cardToken;
     });
 
     print("$token");
@@ -48,93 +61,44 @@ class _MyOrdersState extends State<MyOrders> {
   }
 
   Future getMyOrders() async {
-    var response = await http.get("${HomePage.URL}orders", headers: {
+    var response = await http.get("${HomePage.URL}customer/orders", headers: {
       "Authorization": "Bearer $token",
       "Content-Language": lan
     });
     var data = json.decode(response.body);
-
-    if (data["success"] == "1") {
-       // log(data['orders'].toString());
+log(data.toString());
       setState(() {
+
         for (int i = 0; i < data['orders'].length; i++) {
-           log(data['orders'].toString());
-           print(data['orders'][0]);
-
           allOrders.add(new OrderModel(
-              id: data['orders'][i]['id'],
-              uuid: "${data['orders'][i]['uuid']}",
-              status: "${data['orders'][i]['status']}",
-              statusId: data['orders'][i]['status_id'],
-              sub_total: "${data['orders'][i]['sub_total']}",
-              discount: "${data['orders'][i]['cart']['discount']}",
-              tax: "${data['orders'][i]['tax']}",
-              total: "${data['orders'][i]['total']}",
-            items: ( data['orders'][i]['cart']['items'] as List)?.
+            id: data['orders'][i]['id'],
+            uuid: "${data['orders'][i]['uuid']}",
+            status: "${data['orders'][i]['status']['name']}",
+            nameEn: "${data['orders'][i]['status']['name_en']}",
+            statusId: data['orders'][i]['status_id'],
+            sub_total: "${data['orders'][i]['sub_total']}",
+            discount: "${data['orders'][i]['cart']['discount']}" ?? 0,
+            tax: "${data['orders'][i]['cart']['tax']}",
+            total: "${data['orders'][i]['cart']['total']}",
+            items: (data['orders'][i]['cart']['items'] as List)?.
             map((order) => OrderModel2.fromJson(order)).toList(),
-             vendor: "${data['orders'][i]['cart']['vendor']['name']}"
-              ));
-
-
+            vendor: "${data['orders'][i]['cart']['vendor']['name']}",
+            vendorID: data['orders'][i]['cart']['vendor_id'],
+          ));
         }
 
         isIndicatorActive = false;
       });
 
-    } else {
-      print("Error");
-    }
+
+
 
   }
-
-  // recreateOrder() async{
-  //   var response = await http.post("${HomePage.URL}cart/add_order_method",body: {
-  //     "order_method": "$id",
-  //     "cart_token": "$cardToken",
-  //   });
-  //
-  //   var dataResponseChooseMethode = json.decode(response.body);
-  //   final prefs = await SharedPreferences.getInstance();
-  //   await prefs.setString("orderMethod",dataResponseChooseMethode['cart']['order_method']);
-  //
-  //   if(dataResponseChooseMethode['cart']['order_method']=="1"){
-  //     chooseBranche(id);
-  //
-  //   }else if(dataResponseChooseMethode['cart']['order_method']=="2"){
-  //     Navigator.push(
-  //       context,
-  //       MaterialPageRoute(builder: (context) => CarsList()),
-  //     );
-  //
-  //   }else if(dataResponseChooseMethode['cart']['order_method']=="3"){
-  //     Navigator.push(
-  //       context,
-  //       MaterialPageRoute(builder: (context) => AdressList()),
-  //     );
-  //   }
-  //
-  //
-  //   var response2 = await http.post("${HomePage.URL}cart/choose_branch",headers: {
-  //     "Authorization": "Bearer $token"
-  //   },body: {
-  //     "branch_id": "$vendorID",
-  //     "cart_token": "$cardToken",
-  //   });
-  //
-  //   var dataResponseChooseMethode = json.decode(response.body);
-  //
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(builder: (context) => OrderDetails(dataOrderDetails:dataResponseChooseMethode)),
-  //   );
-  // }
-
 
 
   @override
   Widget build(BuildContext context) {
     double sWidth = MediaQuery.of(context).size.width;
-    double sHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: new AppBar(
         centerTitle: true,
@@ -147,14 +111,27 @@ class _MyOrdersState extends State<MyOrders> {
           icon: Icon(
             Icons.arrow_back_ios,
           ),
-          onPressed: () => onBackPressed(context),
+          onPressed: () {Navigator.pop(context);},
         ),
       ),
       body: isIndicatorActive
           ? Center(
-              child: CircularProgressIndicator(),
-            )
-          : Container(
+          child:Container(
+            height: 100,
+            width:100,
+            child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+          )
+      ):
+      allOrders.isEmpty? InkWell(
+        onTap: (){
+          Navigator.push(context, MaterialPageRoute(builder: (_)=>HomePage(isHomeScreen: true,)));
+        },
+        child: Container(
+          height: 500,
+          width:500,
+          child: Lottie.asset('assets/images/lf20_qbekuzrg.json'),
+        ),
+      )   : Container(
               color: Colors.white,
               height: MediaQuery.of(context).size.height,
               child: ListView.builder(
@@ -175,6 +152,8 @@ class _MyOrdersState extends State<MyOrders> {
                         ],
                       ),
                       child: ExpansionTile(
+                        iconColor: HexColor('#40976c'),
+                        collapsedIconColor:HexColor('#40976c') ,
                         leading: Container(
                             child: CircleAvatar(
                           child: Icon(
@@ -208,7 +187,7 @@ class _MyOrdersState extends State<MyOrders> {
                                           fontSize: sWidth / 30, color: Color(0xff748b9d)),
                                     ),
                                     Text(
-                                      translate('lan.orderNo')+ ' '+ allOrders[index].uuid.toString(),
+                                      translate('lan.orderNo')+ ' '+ allOrders[index].id.toString(),
                                       style: TextStyle(
                                           fontSize: sWidth / 30,
                                           color: HomePage.colorGreen),
@@ -219,47 +198,18 @@ class _MyOrdersState extends State<MyOrders> {
                               ),
                             ),
                             // allOrders[index].statusId==8?
-                            InkWell(
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: Colors.black12,
-                                  borderRadius: new BorderRadius.all(Radius.circular(10),),
 
-                                ),
-                                child: Center(
-                                  child: Icon(Icons.replay_circle_filled,color: HexColor('#40976c'),),
-                                ),
-                              ),
-                            ),
                                 // : Container(),
-                           const SizedBox(width: 7,),
-                            // allOrders[index].statusId==8?
-                           InkWell(
 
-                             child:  Container(
-                               width: 30,
-                               height: 30,
-
-                               decoration: BoxDecoration(
-                                 color: Colors.black12,
-                                 borderRadius: BorderRadius.all(Radius.circular(10),),
-
-                               ),
-                               child: Center(
-                                 child: Icon(Icons.delete,color: HexColor('#40976c'),),
-                               ),
-                             ),
-                           )
                                 // : Container(),
                           ],
                         ),
                         subtitle:Text(
-                          '${allOrders[index].status}',
+                         lan=="ar"? '${allOrders[index].status}':'${allOrders[index].nameEn}',
                           style: TextStyle(
                               fontSize: sWidth / 30, color: Color(0xff748b9d)),
                         ),
+
                         children: [
                           //المنتجات
                           ListView.builder(
@@ -376,7 +326,8 @@ class _MyOrdersState extends State<MyOrders> {
                                                               30),
                                                 ),
                                               ],
-                                            )
+                                            ),
+
                                           ],
                                         ),
                                       ],
@@ -384,45 +335,12 @@ class _MyOrdersState extends State<MyOrders> {
                                   ),
                                 );
                               }),
-                          //Total
-                          Padding(
-                            padding: const EdgeInsets.all(5.0),
-                            child: Row(
-                              children: [
-                                Text(
-                                  translate('lan.total'),
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width /
-                                              30),
-                                ),
-                                Expanded(
-                                  child: Container(),
-                                ),
-                                Text(
-                                  "${allOrders[index].total}",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width /
-                                              30),
-                                ),
-                                Text(
-                                  translate('lan.rs'),
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize:
-                                          MediaQuery.of(context).size.width /
-                                              30),
-                                ),
-                              ],
-                            ),
-                          ),
+
+
 
                           //tax القيمة المضافة
                           Padding(
-                            padding: const EdgeInsets.all(5.0),
+                            padding: const EdgeInsets.fromLTRB(20,5,20,5),
                             child: Row(
                               children: [
                                 Text(
@@ -458,7 +376,7 @@ class _MyOrdersState extends State<MyOrders> {
 
                           //discount كوبون الخصم
                           Padding(
-                            padding: const EdgeInsets.all(5.0),
+                            padding: const EdgeInsets.fromLTRB(20,5,20,5),
                             child: Row(
                               children: [
                                 Text(
@@ -491,6 +409,116 @@ class _MyOrdersState extends State<MyOrders> {
                               ],
                             ),
                           ),
+
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20,5,20,5),
+                            child: Row(
+                              children: [
+                                Text(
+                                  translate('lan.total'),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize:
+                                      MediaQuery.of(context).size.width /
+                                          30),
+                                ),
+                                Expanded(
+                                  child: Container(),
+                                ),
+                                Text(
+                                  "${allOrders[index].total}",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize:
+                                      MediaQuery.of(context).size.width /
+                                          30),
+                                ),
+                                Text(
+                                  translate('lan.rs'),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize:
+                                      MediaQuery.of(context).size.width /
+                                          30),
+                                ),
+                              ],
+                            ),
+                          ),
+const SizedBox(height: 3,),
+                        //   InkWell(
+                        //     onTap: (){
+                        //       if(allOrders[index].items.length ==1) {
+                        //         if (cardToken == null || cardToken == '') {
+                        //           sendDataToServer(
+                        //             productID: allOrders[index].items[0]
+                        //                 .productID,
+                        //             vendorID: allOrders[index].vendorID,
+                        //             notes: allOrders[index].items[0].note,
+                        //             quantity: allOrders[index].items[0]
+                        //                 .quantity,
+                        //             addOns: allOrders[index].items[0].addons,
+                        //             options: allOrders[index].items[0].options,
+                        //           );
+                        //         }
+                        //
+                        //         else
+                        //             haveCard(
+                        //               productID: allOrders[index].items[0]
+                        //                   .productID,
+                        //               vendorID: allOrders[index].vendorID,
+                        //               notes: allOrders[index].items[0].note,
+                        //               quantity: allOrders[index].items[0]
+                        //                   .quantity,
+                        //               addOns: allOrders[index].items[0].addons,
+                        //               options: allOrders[index].items[0]
+                        //                   .options,
+                        //               token: cardToken
+                        //             );
+                        //       }
+                        //       else {
+                        //         if (cardToken == null || cardToken == '') {
+                        //           sendDataToServer(
+                        //             productID: allOrders[index].items[0]
+                        //                 .productID,
+                        //             vendorID: allOrders[index].vendorID,
+                        //             notes: allOrders[index].items[0].note,
+                        //             quantity: allOrders[index].items[0]
+                        //                 .quantity,
+                        //             addOns: allOrders[index].items[0].addons,
+                        //             options: allOrders[index].items[0].options,
+                        //           );
+                        //           for (int i = 1; i <=
+                        //               allOrders[index].items.length+1; i++)
+                        //             haveCard(
+                        //                 productID: allOrders[index].items[i]
+                        //                     .productID,
+                        //                 vendorID: allOrders[index].vendorID,
+                        //                 notes: allOrders[index].items[i].note,
+                        //                 quantity: allOrders[index].items[i]
+                        //                     .quantity,
+                        //                 addOns: allOrders[index].items[i]
+                        //                     .addons,
+                        //                 options: allOrders[index].items[i]
+                        //                     .options,
+                        //                 token: cardToken
+                        //             );
+                        //         }
+                        //       }
+                        //     },
+                        //     child: Container(
+                        //       width: 200,
+                        //       height: 40,
+                        //       decoration: BoxDecoration(
+                        //         color: HomePage.colorGreen,
+                        //         borderRadius: new BorderRadius.all(Radius.circular(10),),
+                        //
+                        //       ),
+                        //       child: Center(
+                        //         child: Text(translate('lan.reorder'),style: TextStyle(color: Colors.white),),
+                        //       ),
+                        //     ),
+                        //   ),
+                        // const  SizedBox(height: 10,),
                         ],
                       ),
                     );
@@ -499,8 +527,104 @@ class _MyOrdersState extends State<MyOrders> {
     );
   }
 
-  onBackPressed(BuildContext context) async {
-    // Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) =>
-    //     HomePage(index:0)), (Route<dynamic> route) => false);
+  // Future sendDataToServer({ int vendorID,
+  //   int productID,
+  //   int quantity,
+  //   List<int> options,
+  //   List<int> addOns,
+  //   String notes,
+  // }   ) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //
+  //
+  //     print(vendorID);print(productID);print(quantity);print(options);
+  //     print(addOns);
+  //    var response = await http.post("${HomePage.URL}cart/add_product",
+  //         body: {
+  //           "vendor_id": "$vendorID",
+  //           "product_id": "$productID",
+  //           "quantity": "$quantity",
+  //           "options":options.toString(),
+  //           "addons": addOns.toString(),
+  //           "note": notes??'',
+  //         });
+  //
+  //     var dataOrder = json.decode(response.body);
+  //     displayToastMessage("${dataOrder['message']}");
+  //     prefs.setInt('counter', 1);
+  //     if ("${dataOrder['success']}" == "1") {
+  //       setState(() {
+  //         cardToken =dataOrder['cart']['token'];
+  //       });
+  //       print("LLLLLLLLLLLLLLLLL ${dataOrder['cart']['token']}");
+  //       saveDataInSharedPref( dataOrder['cart']['token']);
+  //     }
+  // }
+  //
+  // haveCard({ int vendorID,
+  //   int productID,
+  //   int quantity,
+  //   List<int> options,
+  //   List<int> addOns,
+  //   String notes,
+  //   String token
+  // }  )async{
+  //   final prefs = await SharedPreferences.getInstance();
+  //  var response = await http.post("${HomePage.URL}cart/add_product",
+  //       headers: {
+  //         "Authorization": "Bearer $token",
+  //       }, body: {
+  //         "vendor_id": "$vendorID",
+  //         "product_id": "$productID",
+  //         "quantity": "$quantity",
+  //         "cart_token": cardToken,
+  //         "options":options.toString(),
+  //         "addons": addOns.toString(),
+  //         "note": notes??'',
+  //
+  //
+  //       });
+  //
+  //   var dataOrder = json.decode(response.body);
+  //   prefs.setInt('counter',  dataOrder['cart']['items_count']);
+  //   log(dataOrder.toString());
+  //
+  //
+  // }
+
+
+
+  void saveDataInSharedPref( cardTokenP) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString('cardToken', cardTokenP);
+    setState(() {
+      cardToken = cardTokenP;
+    });
+
+  }
+
+  void displayToastMessage(var toastMessage) {
+    // Fluttertoast.showToast(
+    //     msg: toastMessage.toString(),
+    //     toastLength: Toast.LENGTH_SHORT,
+    //     gravity: ToastGravity.BOTTOM,
+    //     textColor: Colors.white,
+    //     fontSize: 16.0);
+    showSimpleNotification(
+        Container(height: 50,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(toastMessage,
+              style: TextStyle(color: Colors.black,
+                  fontSize: 18,
+                  fontFamily: 'Tajawal',
+                  fontWeight: FontWeight.bold),),
+          ),
+        ),
+        duration: Duration(seconds: 3),
+        background:HomePage.colorYellow
+
+    );
   }
 }

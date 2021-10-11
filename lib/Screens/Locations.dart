@@ -15,6 +15,8 @@ import 'package:geopoint/geopoint.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart' as lottie;
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/LocationsModel.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
@@ -32,19 +34,18 @@ class Locations extends StatefulWidget {
 }
 
 class _LocationsState extends State<Locations> {
-  Completer<GoogleMapController> _controller = Completer();
-  LatLng _center;
-  LatLng _lastMapPosition;
-  MapType _currentMapType = MapType.normal;
+  // Completer<GoogleMapController> _controller = Completer();
+  // LatLng _center;
+  // LatLng _lastMapPosition;
+  // MapType _currentMapType = MapType.normal;
 
-  CameraPosition _position1;
+  // CameraPosition _position1;
   Position currentLocation;
 
   List<LocationModel> allLocationsGPS = new List<LocationModel>();
   bool circularIndicatorActive = true;
   bool noMarketsOnMap = false;
   String lan = 'en';
-
 
   Uint8List markerIcon;
   Uint8List myLoc;
@@ -67,8 +68,8 @@ class _LocationsState extends State<Locations> {
     setMarker();
     _getLocation();
 
-      lan = LocalizedApp.of(context).delegate.currentLocale.toString();
-      print(lan);
+    lan = LocalizedApp.of(context).delegate.currentLocale.toString();
+    print(lan);
 
     getLocationStatus();
 
@@ -76,8 +77,7 @@ class _LocationsState extends State<Locations> {
   }
 
   _getLocation() {
-    Geolocator
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+    Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
         .then((Position position) {
       setState(() {
         currentLocation = position;
@@ -105,10 +105,7 @@ class _LocationsState extends State<Locations> {
     } catch (e) {
       print(e);
     }
-
   }
-
-
 
   void setMarker() async {
     markerIcon = await getBytesFromAsset('assets/images/512.png', 110);
@@ -144,12 +141,11 @@ class _LocationsState extends State<Locations> {
   }
 
   getLocationStatus() async {
-    var geoLocator = Geolocator();
     var status = await Geolocator.isLocationServiceEnabled();
     if (status) {
       setState(() {
         // هفعل السيركل عشان الفيو وهى هتطفى تانى من تحت وهقول ان فى صيدليات بعد ماكان الموقع مش متفعل
-       _getLocation();
+        _getLocation();
       });
     } else {
       setState(() {
@@ -214,14 +210,10 @@ class _LocationsState extends State<Locations> {
     }
   }
 
-  // getUserLocation() async {
-  //   currentLocation = await locateUser();
-  //
-  // }
 
   Future<Position> locateUser() async {
-    return Geolocator
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    return Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
   }
 
   List<Marker> _createMarker(List<LocationModel> allLocations) {
@@ -239,9 +231,8 @@ class _LocationsState extends State<Locations> {
                 setState(() {
                   markerTapped = true;
                   location1 = allLocations[i];
-                  open=true;
+                  open = true;
                   getTime(allLocations[i].vendor_id);
-
                 });
               }),
         );
@@ -256,7 +247,7 @@ class _LocationsState extends State<Locations> {
                 setState(() {
                   markerTapped = true;
                   location1 = allLocations[i];
-                  open=true;
+                  open = true;
                   getTime(allLocations[i].vendor_id);
                 });
               }),
@@ -268,42 +259,27 @@ class _LocationsState extends State<Locations> {
   }
 
   getTime(int id) async {
-
-
     final response = await http.get(
       "${HomePage.URL}vendors/$id/times",
     );
 
     var data = json.decode(response.body);
+    print(data);
     startTime.clear();
     endTime.clear();
     setState(() {
       start = '';
       end = '';
-
     });
-
 
     for (int i = 0; i < data.length; i++) {
       // print(DateFormat("HH:mm")
       //     .format(DateFormat.jm().parse(data[i]['end_time'])));
 
       setState(() {
-
-        if(!data[i]['start_time'].contains('00:'))
-        startTime.add(DateFormat("HH:mm")
-            .format(DateFormat.jm().parse(data[i]['start_time'])));
-        else
-          startTime.add(data[i]['start_time']);
-
-        if(!data[i]['end_time'].contains('00:'))
-        endTime.add(DateFormat("HH:mm")
-            .format(DateFormat.jm().parse(data[i]['end_time'])));
-        else
-          endTime.add(data[i]['end_time']);
-
+        startTime.add(data[i]['start_time']);
+        endTime.add(data[i]['end_time']);
       });
-
 
       if (int.parse(startTime[i].substring(0, 2)) <= DateTime.now().hour &&
           int.parse(endTime[i].substring(0, 2)) >= DateTime.now().hour) {
@@ -311,31 +287,26 @@ class _LocationsState extends State<Locations> {
           start = startTime[i];
           end = endTime[i];
         });
-
       }
       print(start);
-
-
     }
 
     print(startTime);
     print(endTime);
 
-    if(start == '')
+    if (start == '')
       setState(() {
         open = false;
       });
     else
       setState(() {
-        open= true;
+        open = true;
       });
-
 
     // for (int i = 0; i < startTime.length; i++) {
     //
     //
     // }
-
   }
 
   getMarketsForGPS() async {
@@ -377,38 +348,42 @@ class _LocationsState extends State<Locations> {
         .asUint8List();
   }
 
-  void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        textColor: Colors.white,
-        fontSize: 16.0);
-    // _goToHome();
-  }
+  // void displayToastMessage(var toastMessage) {
+  //   Fluttertoast.showToast(
+  //       msg: toastMessage.toString(),
+  //       toastLength: Toast.LENGTH_SHORT,
+  //       gravity: ToastGravity.BOTTOM,
+  //       timeInSecForIosWeb: 1,
+  //       textColor: Colors.white,
+  //       fontSize: 16.0);
+  //   // _goToHome();
+  // }
 
-
-
-  void goToHome(int id)async{
+  void goToHome(int id) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('vendorID', id);
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => HomePage(isHomeScreen: true,)),
+      MaterialPageRoute(
+          builder: (context) => HomePage(
+                isHomeScreen: true,
+              )),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
 
     return Scaffold(
-
       body: WillPopScope(
-        onWillPop: ()=> Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (c) => HomePage(isHomeScreen: true,)),
-                (route) => false),
+        onWillPop: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+                builder: (c) => HomePage(
+                      isHomeScreen: true,
+                    )),
+            (route) => false),
         child: Center(
           child: noMarketsOnMap
               ? Center(
@@ -449,21 +424,26 @@ class _LocationsState extends State<Locations> {
                     Container(
                       height: MediaQuery.of(context).size.height,
                       width: MediaQuery.of(context).size.width,
-                      child:currentLocation==null?Center(
-                        child: CircularProgressIndicator(color:Colors.green[700]),
+                      child: currentLocation == null
+                          ? Center(
+                          child:Container(
+                            height: 100,
+                            width:100,
+                            child: lottie.Lottie.asset('assets/images/lf20_mvihowzk.json'),
+                          )
                       )
                           : GoogleMap(
-                        mapType: MapType.normal,
-                        zoomControlsEnabled: false,
-                        initialCameraPosition:
-                        CameraPosition(
-                            target: LatLng(currentLocation.latitude, currentLocation.longitude),
-                            zoom: 10),
-                        onMapCreated: (GoogleMapController controller) {
-                          mapController = controller;
-                        },
-                        markers: _createMarker(allLocationsGPS).toSet(),
-                      ),
+                              mapType: MapType.normal,
+                              zoomControlsEnabled: false,
+                              initialCameraPosition: CameraPosition(
+                                  target: LatLng(currentLocation.latitude,
+                                      currentLocation.longitude),
+                                  zoom: 10),
+                              onMapCreated: (GoogleMapController controller) {
+                                mapController = controller;
+                              },
+                              markers: _createMarker(allLocationsGPS).toSet(),
+                            ),
                     ),
                     Container(
                       height: size.height * 0.25,
@@ -479,44 +459,6 @@ class _LocationsState extends State<Locations> {
                           end: Alignment.bottomCenter,
                         ),
                       ),
-                      // child: Padding(
-                      //   padding: const EdgeInsets.only(left: 20.0),
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: [
-                      //       SizedBox(
-                      //         height: 35,
-                      //       ),
-                      //       Row(
-                      //         children: [
-                      //           Image.asset(
-                      //             'assets/images/512.png',
-                      //             height: 60,
-                      //             width: 60,
-                      //           ),
-                      //           SizedBox(width: 5,),
-                      //           Column(
-                      //             crossAxisAlignment: CrossAxisAlignment.start,
-                      //             children: [
-                      //               Text(
-                      //                 'Welcome',
-                      //                 style: TextStyle(fontSize: 16),
-                      //               ),
-                      //               SizedBox(
-                      //                 height: 5,
-                      //               ),
-                      //               Text(
-                      //                 translate('lan.appName'),
-                      //                 style: TextStyle(
-                      //                     fontSize: 20, fontWeight: FontWeight.bold,fontFamily: 'Tajawal'),
-                      //               )
-                      //             ],
-                      //           ),
-                      //         ],
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
                     ),
                     Positioned(
                       top: size.height * 0.15,
@@ -526,15 +468,19 @@ class _LocationsState extends State<Locations> {
                         width: size.width * 0.9,
                         height: 55,
                         decoration: new BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: new BorderRadius.all(const Radius.circular(10.0))),
-                       child: Center(
-                         child: Text(loc,style: TextStyle(fontSize: 18,fontFamily: 'Tajawal'),),
-                       ),
-
+                            color: Colors.white,
+                            borderRadius: new BorderRadius.all(
+                                const Radius.circular(10.0))),
+                        child: Center(
+                          child: Text(
+                            loc,
+                            style:
+                                TextStyle(fontSize: 18, fontFamily: 'Tajawal'),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       ),
                     ),
-
                     markerTapped ? _buildContainer(location1) : Container(),
                   ],
                 ),
@@ -555,7 +501,8 @@ class _LocationsState extends State<Locations> {
             padding: EdgeInsets.fromLTRB(20, 10, 15, 10),
             decoration: new BoxDecoration(
                 color: Colors.white,
-                borderRadius: new BorderRadius.all(const Radius.circular(30.0))),
+                borderRadius:
+                    new BorderRadius.all(const Radius.circular(30.0))),
             child: Row(
               children: [
                 Expanded(
@@ -569,14 +516,13 @@ class _LocationsState extends State<Locations> {
                             fontWeight: FontWeight.bold,
                             fontSize: 22,
                             fontFamily: 'Tajawal',
-                            color: open? Colors.black : HexColor('#E20000')),
+                            color: open ? Colors.black : HexColor('#E20000')),
                       ),
-                      const  SizedBox(
+                      const SizedBox(
                         height: 3,
                       ),
-
                       Text(
-                      lan=='ar'?  location1.nameAr: location1.nameEn,
+                        lan == 'ar' ? location1.nameAr : location1.nameEn,
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
@@ -586,20 +532,22 @@ class _LocationsState extends State<Locations> {
                       SizedBox(
                         height: 3,
                       ),
-              open?
-                           Text(
-                        translate('lan.open')+' ' + start + ' ' + end,
-                        style: TextStyle(
-                          fontFamily: 'Tajawal',
-                            fontSize: 14, color: HexColor('#40976C')),
-                      )
+                      open
+                          ? Text(
+                              translate('lan.open') + ' ' + start + ' ' + end,
+                              style: TextStyle(
+                                  fontFamily: 'Tajawal',
+                                  fontSize: 14,
+                                  color: HexColor('#40976C')),
+                            )
                           : Text(
-                        translate('lan.closed') ,
-                        style: TextStyle(
-                          fontFamily: 'Tajawal',
-                            color: HexColor('#E20000'), fontSize: 14),
-                      ),
-                      const  SizedBox(
+                              translate('lan.closed'),
+                              style: TextStyle(
+                                  fontFamily: 'Tajawal',
+                                  color: HexColor('#E20000'),
+                                  fontSize: 14),
+                            ),
+                      const SizedBox(
                         height: 5,
                       ),
                       RatingBar.builder(
@@ -619,25 +567,50 @@ class _LocationsState extends State<Locations> {
                           print(rating);
                         },
                       ),
-                   const  SizedBox(
+                      const SizedBox(
                         height: 8,
                       ),
                       GestureDetector(
                         onTap: () {
-                          if(open)
-                           goToHome(location.vendor_id);
+                          if (open)
+                            goToHome(location.vendor_id);
+                          else
+                            showSimpleNotification(
+                                Container(
+                                  height: 50,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      translate('lan.branchClosed'),
+                                      style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 18,
+                                          fontFamily: 'Tajawal',
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                                duration: Duration(seconds: 3),
+                                background: HomePage.colorYellow);
                         },
                         child: Container(
                           width: 120,
                           height: 30,
                           decoration: BoxDecoration(
-                            color: open? HexColor('#40976C') : HexColor('#E20000'),
+                            color: open
+                                ? HexColor('#40976C')
+                                : HexColor('#E20000'),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Center(
                             child: Text(
-                              open? translate('lan.orderNow') : translate('lan.closed'),
-                              style: TextStyle(fontSize: 14, color: Colors.white,fontFamily: 'Tajawal'),
+                              open
+                                  ? translate('lan.orderNow')
+                                  : translate('lan.closed'),
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  fontFamily: 'Tajawal'),
                             ),
                           ),
                         ),
@@ -665,7 +638,9 @@ class _LocationsState extends State<Locations> {
             ),
           ),
         ),
-        SizedBox(height: 85,)
+        SizedBox(
+          height: 85,
+        )
       ],
     );
   }

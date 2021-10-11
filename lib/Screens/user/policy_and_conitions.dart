@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
+import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shormeh/Screens/Home/HomePage.dart';
 
 class ConditionsAndRules extends StatefulWidget {
   @override
@@ -19,41 +24,36 @@ class _ConditionsAndRulesState extends State<ConditionsAndRules> {
   }
   String terms;
   bool circularIndicatorActive=true;
-  String URL;
-
+ bool loading = false;
+  int lan = 0;
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    getDataFromSharedPref();
+    getDataFromSharedPrfs();
+    getTerms();
   }
 
-  Future<void> getDataFromSharedPref() async {
+  Future getDataFromSharedPrfs() async {
     final prefs = await SharedPreferences.getInstance();
-    final url = prefs.getString('url');
+    int lan1 = prefs.getInt('translateLanguage');
     setState(() {
-      URL=url;
-      getTerms();
+      lan = lan1;
     });
-
   }
+
 
   Future getTerms() async {
-
-    var response = await http.post("$URL/api/preparation_register",body: {
-      "key": "1234567890",
+setState(() {
+  loading = true;
+});
+    var response = await http.get("${HomePage.URL}terms");
+    setState(() {
+      terms = response.body.toString();
+      loading = false;
     });
 
-    var dataTerms = json.decode(response.body);
 
-    if(dataTerms['status'].toString()=="true"){
-      setState(() {
-        terms=dataTerms['result']['Terms'][0]['Terms'];
-        circularIndicatorActive=false;
-      });
-
-    }else{
-    }
 
   }
   void displayToastMessage(var toastMessage) {
@@ -72,74 +72,43 @@ class _ConditionsAndRulesState extends State<ConditionsAndRules> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: new AppBar(
-        backgroundColor:  HexColor('#40976c'),
-        elevation: 0.0,
-        leading: new Container(
-            width: 40,
-            height: 40,
-            margin: EdgeInsets.only(top: 12.5, bottom: 12.5, right: 20),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(300),
-              onTap: () {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/home', (Route<dynamic> route) => false);
-              },
-              child: Image(
-                image: AssetImage('assets/images/close.png'),
-              ),
-            )),
-        title: new Center(
-          child: Container(
-              width: MediaQuery.of(context).size.width/8.5,
-              height: MediaQuery.of(context).size.width/8,
-
-              // margin: EdgeInsets.only(top: 12.5, bottom: 12.5, right: 20),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(300),
-                onTap: () {
-                  Navigator.of(context).pushNamed('/home', arguments: 1);
-                },
-                child: Image(
-//                  backgroundColor: Colors.transparent,
-                  image: AssetImage('assets/images/logo.png'),
-                  fit: BoxFit.fill,
-                ),
-              )),
-        ),
-        actions: <Widget>[
-          Container(
-              width: 40,
-              height: 40,
-              margin: EdgeInsets.only(top: 12.5, bottom: 12.5, right: 20),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(300),
-                onTap: () {
-                  onBackPressed(context);
-                },
-                child: Icon(Icons.arrow_forward_ios,size: MediaQuery.of(context).size.width/15,
-                  color: Colors.black,),
-              )),
-        ],
-      ),
-      body:  circularIndicatorActive?
-        Center(child: new CircularProgressIndicator(),):
-      Container(
-        padding: EdgeInsets.all(15.0),
-        child: ListView(
-          children: <Widget>[
-            SizedBox(height: 15.0,),
-            Center(
-              child: Container(color: colorGreen, height: 2, width: 900,),
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(
+            translate('lan.terms'),
+          ),
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios,
             ),
-            SizedBox(height: 15.0,),
-            Text("الشروط والقوانين",style: TextStyle(fontSize: 20.0,color: colorGreen),),
-            SizedBox(height: 15.0,),
-            Text(terms,
-              style: TextStyle(fontSize: MediaQuery.of(context).size.width/25),),
-          ],
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          backgroundColor: HexColor('#40976c'),
+          elevation: 5.0,
         ),
+      body:
+      loading?Center(
+          child:Container(
+            height: 100,
+            width:100,
+            child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+          )
+      )
+          :  Row(
+        mainAxisAlignment:lan==0? MainAxisAlignment.end:MainAxisAlignment.start,
+            children: [
+              Directionality(
+        textDirection: TextDirection.rtl,
+                child: Html(
+        data: terms,
+                  padding: EdgeInsets.all(10),
+                  shrinkToFit: true,
       ),
+              ),
+            ],
+          )
     );
   }
 }

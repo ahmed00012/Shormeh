@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+
 import 'package:hexcolor/hexcolor.dart';
 import 'package:lottie/lottie.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/CardModel2.dart';
 import 'package:shormeh/Screens/Card/Card3OrderDetails.dart';
@@ -83,171 +85,190 @@ class _Card2State extends State<Card2> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection:
-          translationLanguage == 1 ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            translate('lan.trkEltawseel'),
-            style: TextStyle(fontSize: MediaQuery.of(context).size.width / 25),
-          ),
-          centerTitle: true,
-          backgroundColor: HexColor('#40976c'),
-          elevation: 5.0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              size: MediaQuery.of(context).size.width / 15,
-            ),
-            onPressed: () => onBackPressed(context),
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          translate('lan.trkEltawseel'),
         ),
-        body: Container(
-          height: MediaQuery.of(context).size.height,
-          width: MediaQuery.of(context).size.width,
-          child: isIndicatorActive
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: HexColor('#40976c'),
-                  ),
-                )
-              : Column(
-                  children: [
-                    const SizedBox(
-                      height: 30,
-                    ),
-                    Container(
-                      height: 170,
-                      width: MediaQuery.of(context).size.width * 0.5,
-                      child: Lottie.asset(
-                          'assets/images/69733-food-beverage.json',
-                          fit: BoxFit.fill),
-                    ),
-                    const SizedBox(
-                      height: 30,
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: ScrollPhysics(),
-                          itemCount: allOrderMethods.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(30, 10, 30, 10),
-                              child: GestureDetector(
-                                onTap: () {
-                                  sendMethodeOrderDeliver(
-                                      allOrderMethods[index].id);
-                                },
-                                child: Container(
-                                  height: 80,
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.8,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(15.0),
-                                    ),
-                                    color: Color(0xfff7f7f7),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      SizedBox(width: 10,),
-                                      //image
-                                      Lottie.asset(images[index],
-                                          fit: BoxFit.fill),
-
-
-                                      //Name
-                                      Expanded(
-                                        child: Center(
-                                          child: Text(
-                                            translationLanguage == 0
-                                                ? "${allOrderMethods[index].title_en}"
-                                                : "${allOrderMethods[index].title_ar}",
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: MediaQuery.of(context)
-                                                        .size
-                                                        .width /
-                                                    25),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                    )
-                  ],
-                ),
+        centerTitle: true,
+        backgroundColor: HexColor('#40976c'),
+        elevation: 5.0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            size: MediaQuery.of(context).size.width / 15,
+          ),
+          onPressed: () => onBackPressed(context),
         ),
       ),
+      body: isIndicatorActive
+          ? Center(
+              child: Container(
+              height: 100,
+              width: 100,
+              child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+            ))
+          : Directionality(
+              textDirection: translationLanguage == 1
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              child: Column(
+                children: [
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  Container(
+                    height: 170,
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    child: Lottie.asset(
+                        'assets/images/69733-food-beverage.json',
+                        fit: BoxFit.fill),
+                  ),
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: ScrollPhysics(),
+                        itemCount: allOrderMethods.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(30, 10, 30, 10),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (allOrderMethods[index].id == 1) {
+                                  sendMethodeOrderDeliver(1);
+                                } else if (allOrderMethods[index].id == 2) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => CarsList()),
+                                  );
+                                  sendMethodeOrderDeliver(2);
+                                } else if (allOrderMethods[index].id == 3) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => AdressList()),
+                                  );
+                                  sendMethodeOrderDeliver(3);
+                                }
+                              },
+                              child: Container(
+                                height: 80,
+                                width: MediaQuery.of(context).size.width * 0.8,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(15.0),
+                                  ),
+                                  color: Color(0xfff7f7f7),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    SizedBox(
+                                      width: 10,
+                                    ),
+                                    //image
+                                    Lottie.asset(images[index],
+                                        fit: BoxFit.fill),
+
+                                    //Name
+                                    Expanded(
+                                      child: Center(
+                                        child: Text(
+                                          translationLanguage == 0
+                                              ? "${allOrderMethods[index].title_en}"
+                                              : "${allOrderMethods[index].title_ar}",
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: MediaQuery.of(context)
+                                                      .size
+                                                      .width /
+                                                  25),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                  )
+                ],
+              ),
+            ),
     );
   }
 
   Future sendMethodeOrderDeliver(int id) async {
-    var response =
-        await http.post("${HomePage.URL}cart/add_order_method", body: {
-      "order_method": "$id",
-      "cart_token": "$cardToken",
-    });
-
-    var dataResponseChooseMethode = json.decode(response.body);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        "orderMethod", dataResponseChooseMethode['cart']['order_method']);
-
-    if (dataResponseChooseMethode['cart']['order_method'] == "1") {
-      chooseBranche(id);
-    } else if (dataResponseChooseMethode['cart']['order_method'] == "2") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => CarsList()),
-      );
-    } else if (dataResponseChooseMethode['cart']['order_method'] == "3") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => AdressList()),
-      );
-    }
-  }
-
-  Future chooseBranche(int id) async {
     setState(() {
       isIndicatorActive = true;
     });
     var response =
-        await http.post("${HomePage.URL}cart/choose_branch", headers: {
-      "Authorization": "Bearer $token"
+        await http.post("${HomePage.URL}cart/add_order_method", headers: {
+      "Authorization": "Bearer $token",
     }, body: {
-      "branch_id": "$vendorID",
+      "order_method": "$id",
       "cart_token": "$cardToken",
+      "branch_id": "$vendorID",
     });
 
     var dataResponseChooseMethode = json.decode(response.body);
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) =>
-              OrderDetails(dataOrderDetails: dataResponseChooseMethode)),
-    );
-
+    log(dataResponseChooseMethode.toString() + 'coco');
+    if (id == 1)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) =>
+                OrderDetails(dataOrderDetails: dataResponseChooseMethode)),
+      );
     isIndicatorActive = false;
   }
 
+  // Future chooseBranche(int id) async {
+  //   setState(() {
+  //     isIndicatorActive = true;
+  //   });
+  //   var response =
+  //       await http.post("${HomePage.URL}cart/choose_branch", headers: {
+  //     "Authorization": "Bearer $token"
+  //   }, body: {
+  //     "branch_id": "$vendorID",
+  //     "cart_token": "$cardToken",
+  //   });
+  //
+  //   var dataResponseChooseMethode = json.decode(response.body);
+  //   log(dataResponseChooseMethode.toString());
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //         builder: (context) =>
+  //             OrderDetails(dataOrderDetails: dataResponseChooseMethode)),
+  //   );
+  //
+  //   isIndicatorActive = false;
+  // }
+
   void displayToastMessage(var toastMessage) {
-    Fluttertoast.showToast(
-        msg: toastMessage.toString(),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        textColor: Colors.white,
-        fontSize: 16.0);
+    showSimpleNotification(
+        Container(
+          height: 50,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              toastMessage,
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        duration: Duration(seconds: 3),
+        background: HomePage.colorYellow);
   }
 
   onBackPressed(BuildContext context) async {
