@@ -7,7 +7,6 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shormeh/Models/CardModel1.dart';
 import 'package:shormeh/Models/ProductsModel.dart';
 import 'package:shormeh/Screens/Cats/3ProductDetails.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
@@ -23,6 +22,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   bool isIndicatorActive = true;
   String token='';
   String lan = '';
+  int vendor;
 
 
 
@@ -81,9 +81,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final prefs = await SharedPreferences.getInstance();
     final _translateLanguage = prefs.getInt('translateLanguage');
     final _token = prefs.getString("token");
+    final _vendor = prefs.getInt("vendorID");
+
     setState(() {
       _translateLanguage==0?lan='en':lan='ar';
       token = _token;
+      vendor  = _vendor;
     });
     getMyProducts();
   }
@@ -143,8 +146,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) =>
-                          ProductDetails(productID: allSubCats[index].id)),
-                );
+                          ProductDetails(
+                            productID: allSubCats[index].id,
+                            vendor: vendor,
+                            token: token,
+                            favorite: true,
+                            // catID: widget.catID,
+
+                          ),
+                ));
               },
               child: Container(
                   height: MediaQuery.of(context).size.height / 4.5,

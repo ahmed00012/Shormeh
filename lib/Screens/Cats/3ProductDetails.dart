@@ -21,6 +21,7 @@ import 'package:shormeh/Models/ProductDetailsModel.dart';
 import 'package:shormeh/Models/Slider.dart';
 import 'package:shormeh/Screens/Card/Card1MyProductDetials.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
+import 'package:shormeh/Screens/SideBar/favorites_screen.dart';
 import 'package:shormeh/Screens/user/login.dart';
 
 import '2Products.dart';
@@ -32,6 +33,7 @@ class ProductDetails extends StatefulWidget {
   String token;
   int catID;
   bool update;
+  bool favorite;
 
   ProductDetails(
       {Key key,
@@ -40,7 +42,8 @@ class ProductDetails extends StatefulWidget {
       this.vendor,
       this.token,
       this.catID,
-      this.update});
+      this.update,
+      this.favorite});
 
   @override
   _ProductDetailsState createState() => _ProductDetailsState();
@@ -50,9 +53,9 @@ class _ProductDetailsState extends State<ProductDetails> {
   ProductDetailsModel productDetailsModel =
       new ProductDetailsModel(0, "", "", "", "", "", "", 0);
   bool isIndicatorActive = true;
-  List<SliderModel> allSliderImagesProduct = new List<SliderModel>();
-  List<AddonModel> allAddons = new List<AddonModel>();
-  List<OptionsModel> allOptions = new List<OptionsModel>();
+  List<SliderModel> allSliderImagesProduct = [];
+  List<AddonModel> allAddons =[];
+  List<OptionsModel> allOptions = [];
   TextEditingController tECNotes = new TextEditingController();
   List<String> images = [];
   String lan = '';
@@ -999,27 +1002,16 @@ class _ProductDetailsState extends State<ProductDetails> {
         "note": "${tECNotes.text}",
         "cart_token": cardToken,
       });
-      // var dataOrder = json.decode(response.body);
-      // var dataOrder = json.decode(response.body);
-
-      print(token.toString()+'hhhhhhh');
-      print('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvd29ybGRhcHAuc2l0ZVwvYXBpXC9hdXRoXC92ZXJpZnkiLCJpYXQiOjE2MzM5NDExMjgsImV4cCI6NTI2NTQ3NzEyOCwibmJmIjoxNjMzOTQxMTI4LCJqdGkiOiJFV0ZhSkZVNzM4d1FTdTJ6Iiwic3ViIjoxNjcsInBydiI6ImE1YmI5ODE5OGJiNDNkYTZiNDU3NDljMDQ3NTljODFjMTIyNDMzYzEifQ.sWfqJXYvL7WhmqD3RwcbGenyW1JdrvpzsT3vUUK0wOY');
-      print(vendorID);
-      print(productDetailsModel.id);
-      print(portinsNum);
-      print(listOptions);
-      print(listAddons);
-      print("Card Token => $cardToken");
-      print(response.body.toString());
-      // displayToastMessage(dataOrder['success']);
-      // if ("${dataOrder['success']}" == "1") {
-      //   setState(() {
-      //     prefs.setInt('counter', dataOrder['cart']['items_count']);
-      //     counter = dataOrder['cart']['items_count'];
-      //   });
-      //   displayToastMessage(translate('lan.addedSuccessfully'));
-      //   goToMyCard();
-      // }
+      var dataOrder = json.decode(response.body);
+      displayToastMessage(dataOrder['message']);
+      if ("${dataOrder['success']}" == "1") {
+        setState(() {
+          prefs.setInt('counter', dataOrder['cart']['items_count']);
+          counter = dataOrder['cart']['items_count'];
+        });
+        displayToastMessage(translate('lan.addedSuccessfully'));
+        goToMyCard();
+      }
     }
   }
 
@@ -1038,7 +1030,15 @@ class _ProductDetailsState extends State<ProductDetails> {
         displayToastMessage(translate('lan.updated'));
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => Card1()));
-      } else {
+      } else if(widget.favorite!=null)
+      {
+        displayToastMessage(translate('lan.addedSuccessfully'));
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => FavoritesScreen()));
+      }
+      else {
         displayToastMessage(translate('lan.addedSuccessfully'));
         Navigator.pushReplacement(
             context,

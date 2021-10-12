@@ -1,19 +1,19 @@
 import 'dart:convert';
-import 'dart:developer';
+
 
 import 'package:badges/badges.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:lottie/lottie.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/ProductsModel.dart';
 import 'package:shormeh/Screens/Card/Card1MyProductDetials.dart';
-import 'package:shormeh/Screens/Cats/1Categories.dart';
+
 import 'package:shormeh/Screens/Cats/3ProductDetails.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 import 'package:shormeh/Screens/user/login.dart';
@@ -46,6 +46,7 @@ class _ProductsState extends State<Products> {
   String token = '';
   int currentPage = 1;
   int vendor;
+  bool isLogin;
 // bool isLoadingVertical = false;
   int increment = 0;
 int counter;
@@ -69,6 +70,7 @@ int counter;
     final _counter = prefs.getInt("counter");
     setState(() {
       _counter==null?counter=0:counter=_counter;
+      isLogin = _isLogin??false;
       token = _token;
       vendor=_vendorID;
     });
@@ -93,9 +95,6 @@ int counter;
     }, body: {
       "product_id": product.id.toString(),
     });
-    var data = json.decode(respons.body);
-    print(data);
-
   }
 
   Future getAllSubCats(int pageKey) async {
@@ -290,7 +289,8 @@ int counter;
                         context,
                         MaterialPageRoute(
                             builder: (context) =>
-                                ProductDetails(productID: allSubCats[index].id,
+                                ProductDetails(
+                                  productID: allSubCats[index].id,
                                   vendor: vendor,
                                   token: token,
                                   catID: widget.catID,
@@ -327,12 +327,17 @@ int counter;
                               padding: const EdgeInsets.all(10),
                               child: GestureDetector(
                                 onTap: (){
-                                  setState(() {
-                                    allSubCats[index].liked==1?
-                                    allSubCats[index].liked = 0 :
-                                    allSubCats[index].liked = 1;
-                                  });
-                                  toggle(allSubCats[index]);
+                                  print(isLogin.toString()+'hhhhkkkk');
+                                  if( isLogin!=false) {
+                                    setState(() {
+                                      allSubCats[index].liked == 1 ?
+                                      allSubCats[index].liked = 0 :
+                                      allSubCats[index].liked = 1;
+                                    });
+                                    toggle(allSubCats[index]);
+                                  }
+                                  else
+                                    Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
                                 },
                                 child: Align(
                                   alignment: Alignment.topRight,

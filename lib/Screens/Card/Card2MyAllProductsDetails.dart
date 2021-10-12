@@ -15,7 +15,6 @@ import 'package:shormeh/Screens/Card/OrderHome/AdressList.dart';
 import 'package:shormeh/Screens/Home/HomePage.dart';
 import 'package:http/http.dart' as http;
 
-import 'Card1MyProductDetials.dart';
 
 class Card2 extends StatefulWidget {
   @override
@@ -25,7 +24,7 @@ class Card2 extends StatefulWidget {
 class _Card2State extends State<Card2> with TickerProviderStateMixin {
   bool isIndicatorActive = true;
 
-  List<Card2Model> allOrderMethods = new List<Card2Model>();
+  List<Card2Model> allOrderMethods = [];
 
   String cardToken = "";
   String token = "";
@@ -67,6 +66,7 @@ class _Card2State extends State<Card2> with TickerProviderStateMixin {
         await http.get("${HomePage.URL}vendors/$vendorID/ordermethods");
 
     var dataMyCardProducts = json.decode(response.body);
+
 
     setState(() {
       print("${dataMyCardProducts.length}");
@@ -138,21 +138,26 @@ class _Card2State extends State<Card2> with TickerProviderStateMixin {
                             child: GestureDetector(
                               onTap: () {
                                 if (allOrderMethods[index].id == 1) {
+                                  setState(() {
+                                    isIndicatorActive= true;
+                                  });
                                   sendMethodeOrderDeliver(1);
                                 } else if (allOrderMethods[index].id == 2) {
+                                  sendMethodeOrderDeliver(2);
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) => CarsList()),
                                   );
-                                  sendMethodeOrderDeliver(2);
+
                                 } else if (allOrderMethods[index].id == 3) {
+                                  sendMethodeOrderDeliver(3);
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) => AdressList()),
                                   );
-                                  sendMethodeOrderDeliver(3);
+
                                 }
                               },
                               child: Container(
@@ -204,9 +209,7 @@ class _Card2State extends State<Card2> with TickerProviderStateMixin {
   }
 
   Future sendMethodeOrderDeliver(int id) async {
-    setState(() {
-      isIndicatorActive = true;
-    });
+
     var response =
         await http.post("${HomePage.URL}cart/add_order_method", headers: {
       "Authorization": "Bearer $token",
@@ -218,7 +221,7 @@ class _Card2State extends State<Card2> with TickerProviderStateMixin {
 
     var dataResponseChooseMethode = json.decode(response.body);
     log(dataResponseChooseMethode.toString() + 'coco');
-    if (id == 1)
+    if (id == 1){
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -226,6 +229,8 @@ class _Card2State extends State<Card2> with TickerProviderStateMixin {
                 OrderDetails(dataOrderDetails: dataResponseChooseMethode)),
       );
     isIndicatorActive = false;
+    }
+
   }
 
   // Future chooseBranche(int id) async {

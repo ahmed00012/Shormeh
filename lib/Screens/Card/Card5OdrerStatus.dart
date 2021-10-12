@@ -45,7 +45,7 @@ class _OrderStatusState extends State<OrderStatus> {
 
   Future getDataFromSharedPrfs() async {
     final prefs = await SharedPreferences.getInstance();
-    final _cardToken = prefs.getString("cardToken");
+    // final _cardToken = prefs.getString("cardToken");
     final _token = prefs.getString("token");
     int _lan = prefs.getInt('translateLanguage');
     setState(() {
@@ -140,211 +140,212 @@ class _OrderStatusState extends State<OrderStatus> {
             },
           ),
         ),
-        body: Container(
-            height: MediaQuery.of(context).size.height,
-            color: Colors.white,
-            child: isIndicatorActive
-                ? Center(
-                    child: Container(
-                    height: 100,
-                    width: 100,
-                    child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
-                  ))
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: MediaQuery.of(context).size.width / 3,
-                        height: MediaQuery.of(context).size.width / 3,
-                        decoration: new BoxDecoration(
-                          image: new DecorationImage(
-                            image: AssetImage('assets/images/logo.png'),
+        body: isIndicatorActive
+            ? Center(
+                child: Container(
+                height: 100,
+                width: 100,
+                child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+              ))
+            : ListView(
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: MediaQuery.of(context).size.width / 3,
+                  height: MediaQuery.of(context).size.width / 3,
+                  decoration: new BoxDecoration(
+                    image: new DecorationImage(
+                      image: AssetImage('assets/images/logo.png'),
+                    ),
+                  ),
+                ),
+                expectedTime.toString() != "null"
+                    ? Text(
+                  translate('lan.expectedTime') +
+                      expectedTime.toString() +
+                      ' ' +
+                      translate('lan.minute'),
+                  style: TextStyle(
+                      color: HomePage.colorGreen, fontSize: 16),
+                )
+                    : Container(),
+                Text(
+                  translate('lan.orderNo') +
+                      ' ' +
+                      widget.orderID.toString(),
+                  style:
+                  TextStyle(color: HomePage.colorGreen, fontSize: 16),
+                ),
+                Container(
+                  height: MediaQuery.of(context).size.height / 2,
+                  child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: ScrollPhysics(),
+                      itemCount: allStatusHistory.length,
+                      padding: EdgeInsets.fromLTRB(0, 20, 0, 20),
+                      itemBuilder: (BuildContext context, int index) {
+                        return Container(
+                          alignment: Alignment.center,
+                          margin: EdgeInsets.all(
+                            20,
                           ),
-                        ),
-                      ),
-                      expectedTime.toString() != "null"
-                          ? Text(
-                              translate('lan.expectedTime') +
-                                  expectedTime.toString() +
-                                  ' ' +
-                                  translate('lan.minute'),
-                              style: TextStyle(
-                                  color: HomePage.colorGreen, fontSize: 16),
-                            )
-                          : Container(),
-                      Text(
-                        translate('lan.orderNo') +
-                            ' ' +
-                            widget.orderID.toString(),
-                        style:
-                            TextStyle(color: HomePage.colorGreen, fontSize: 16),
-                      ),
-                      Container(
-                        height: MediaQuery.of(context).size.height / 2,
-                        child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: ScrollPhysics(),
-                            itemCount: allStatusHistory.length,
-                            padding: EdgeInsets.fromLTRB(0, 20, 0, 20),
-                            itemBuilder: (BuildContext context, int index) {
-                              return Container(
-                                alignment: Alignment.center,
-                                margin: EdgeInsets.all(
-                                  20,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: SizedBox(),
+                                flex: 2,
+                              ),
+                              Container(
+                                width: 50,
+                                child: Image.network(
+                                  '${allStatusHistory[index].image}',
+                                  fit: BoxFit.contain,
+                                  height: 35,
+                                  width: 35,
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+                              ),
+                              Expanded(
+                                flex: 5,
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.center,
                                   children: [
-                                    Expanded(
-                                      child: SizedBox(),
-                                      flex: 2,
+                                    lan == 'ar'
+                                        ? Text(
+                                      "${allStatusHistory[index].name}",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color:
+                                          HomePage.colorGreen),
+                                    )
+                                        : Text(
+                                      "${allStatusHistory[index].nameEn}",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color:
+                                          HomePage.colorGreen),
                                     ),
-                                    Container(
-                                      width: 50,
-                                      child: Image.network(
-                                        '${allStatusHistory[index].image}',
-                                        fit: BoxFit.contain,
-                                        height: 35,
-                                        width: 35,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 5,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          lan == 'ar'
-                                              ? Text(
-                                                  "${allStatusHistory[index].name}",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                      color:
-                                                          HomePage.colorGreen),
-                                                )
-                                              : Text(
-                                                  "${allStatusHistory[index].nameEn}",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                      color:
-                                                          HomePage.colorGreen),
-                                                ),
-                                          Text(
-                                            "${allStatusHistory[index].created_at}",
-                                            style: TextStyle(
-                                                color: HomePage.colorGreen),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: SizedBox(),
-                                      flex: 2,
+                                    Text(
+                                      "${allStatusHistory[index].created_at}",
+                                      style: TextStyle(
+                                          color: HomePage.colorGreen),
                                     ),
                                   ],
                                 ),
-                              );
-                            }),
-                      ),
-                      !clicked?  orderMethod == 2 && statusID == 9 ?  ButtonTheme(
-                        height: 45,
-                        minWidth: 200,
-                        shape: new RoundedRectangleBorder(
-                            borderRadius: new BorderRadius.circular(10.0)),
-                        child: RaisedButton(
-                          child: Text(translate('lan.alameelAmamAlfar'),
-                              style: TextStyle(
-                                  fontSize: 18, color: Colors.white)),
-                          color: HomePage.colorGreen,
-                          onPressed: () {
-                            setState(() {
-                              clicked = true;
-                            });
-                            reachFromBranche();
-                          },
-                        ),
-                      ):
-                      ButtonTheme(
-                        height: 45,
-                        minWidth: 200,
-                        shape: new RoundedRectangleBorder(
-                            borderRadius: new BorderRadius.circular(10.0)),
-                        child: RaisedButton(
-                          child: Text(translate('lan.alameelAmamAlfar'),
-                              style: TextStyle(
-                                  fontSize: 18, color: Colors.white)),
-                          color: HomePage.colorGrey,
-                          onPressed: () {},
-                        ),
-                      ):Container(),
-                      SizedBox(
-                        height: MediaQuery.of(context).size.width / 20,
-                      ),
+                              ),
+                              Expanded(
+                                child: SizedBox(),
+                                flex: 2,
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                ),
+                orderMethod == 2 && !clicked? statusID==9 ?  ButtonTheme(
+                  height: 45,
+                  minWidth: 200,
+                  shape: new RoundedRectangleBorder(
+                      borderRadius: new BorderRadius.circular(10.0)),
+                  child: RaisedButton(
+                    child: Text(translate('lan.alameelAmamAlfar'),
+                        style: TextStyle(
+                            fontSize: 18, color: Colors.white)),
+                    color: HomePage.colorGreen,
+                    onPressed: () {
+                      setState(() {
+                        clicked = true;
+                      });
+                      reachFromBranche();
+                    },
+                  ),
+                ):
+                ButtonTheme(
+                  height: 45,
+                  minWidth: 200,
+                  shape: new RoundedRectangleBorder(
+                      borderRadius: new BorderRadius.circular(10.0)),
+                  child: RaisedButton(
+                    child: Text(translate('lan.alameelAmamAlfar'),
+                        style: TextStyle(
+                            fontSize: 18, color: Colors.white)),
+                    color: HomePage.colorGrey,
+                    onPressed: () {},
+                  ),
+                ):Container(),
+                SizedBox(
+                  height: MediaQuery.of(context).size.width / 20,
+                ),
+                Container(
+                  width: MediaQuery.of(context).size.width,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(child: Container()),
                       Container(
-                        width: MediaQuery.of(context).size.width,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Expanded(child: Container()),
-                            Container(
-                              height: MediaQuery.of(context).size.width / 8,
-                              width: MediaQuery.of(context).size.width / 2.3,
-                              child: ButtonTheme(
-                                shape: new RoundedRectangleBorder(
-                                    borderRadius:
-                                        new BorderRadius.circular(10.0)),
-                                height: MediaQuery.of(context).size.width / 8,
-                                child: RaisedButton(
-                                  child: Text(translate('lan.myOrders'),
-                                      style: TextStyle(
-                                          fontSize: MediaQuery.of(context)
-                                                  .size
-                                                  .width /
-                                              25,
-                                          color: Colors.white)),
-                                  color: Color(0xff40976C),
-                                  onPressed: () {
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => MyOrders()));
-                                  },
-                                ),
-                              ),
-                            ),
-                            Expanded(child: Container()),
-                            Container(
-                              height: MediaQuery.of(context).size.width / 8,
-                              width: MediaQuery.of(context).size.width / 2.3,
-                              child: ButtonTheme(
-                                shape: new RoundedRectangleBorder(
-                                    borderRadius:
-                                        new BorderRadius.circular(10.0)),
-                                height: MediaQuery.of(context).size.width / 8,
-                                child: RaisedButton(
-                                  child: Text(translate('lan.tahdeeth'),
-                                      style: TextStyle(
-                                          fontSize: MediaQuery.of(context)
-                                                  .size
-                                                  .width /
-                                              25,
-                                          color: Colors.white)),
-                                  color: Color(0xff40976C),
-                                  onPressed: () {
-                                    //Navigator.pop(context);
-                                    //EditAyaDialoge(allSurahListD);
-                                    getDataFromSharedPrfs();
-                                  },
-                                ),
-                              ),
-                            ),
-                            Expanded(child: Container()),
-                          ],
+                        height: MediaQuery.of(context).size.width / 8,
+                        width: MediaQuery.of(context).size.width / 2.3,
+                        child: ButtonTheme(
+                          shape: new RoundedRectangleBorder(
+                              borderRadius:
+                              new BorderRadius.circular(10.0)),
+                          height: MediaQuery.of(context).size.width / 8,
+                          child: RaisedButton(
+                            child: Text(translate('lan.myOrders'),
+                                style: TextStyle(
+                                    fontSize: MediaQuery.of(context)
+                                        .size
+                                        .width /
+                                        25,
+                                    color: Colors.white)),
+                            color: Color(0xff40976C),
+                            onPressed: () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => MyOrders()));
+                            },
+                          ),
                         ),
-                      )
+                      ),
+                      Expanded(child: Container()),
+                      Container(
+                        height: MediaQuery.of(context).size.width / 8,
+                        width: MediaQuery.of(context).size.width / 2.3,
+                        child: ButtonTheme(
+                          shape: new RoundedRectangleBorder(
+                              borderRadius:
+                              new BorderRadius.circular(10.0)),
+                          height: MediaQuery.of(context).size.width / 8,
+                          child: RaisedButton(
+                            child: Text(translate('lan.tahdeeth'),
+                                style: TextStyle(
+                                    fontSize: MediaQuery.of(context)
+                                        .size
+                                        .width /
+                                        25,
+                                    color: Colors.white)),
+                            color: Color(0xff40976C),
+                            onPressed: () {
+                              //Navigator.pop(context);
+                              //EditAyaDialoge(allSurahListD);
+                              getDataFromSharedPrfs();
+                            },
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Container()),
                     ],
-                  )),
+                  ),
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
   }

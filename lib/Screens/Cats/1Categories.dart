@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:lottie/lottie.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shormeh/Models/Cats.dart';
@@ -34,7 +35,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // bool isIndicatorActive = true;
 
-  List<Cats> allCats = new List<Cats>();
+  List<Cats> allCats = [];
   List<String> allSliderHome = [];
   String language = '';
   DateTime currentBackPressTime;
@@ -377,7 +378,17 @@ String token;
                           ),
                         ),
                         //Cats
-                        GridView.builder(
+                        allCats.isEmpty? Column(
+                          children: [
+                            SizedBox(height: 100,),
+                            Container(
+                              height: 100,
+                              width: 100,
+                              child: Lottie.asset('assets/images/lf20_mvihowzk.json'),
+                            )
+                          ],
+                        )
+                            :     GridView.builder(
                             shrinkWrap: true,
                             physics: ScrollPhysics(),
                             itemCount: allCats.length,

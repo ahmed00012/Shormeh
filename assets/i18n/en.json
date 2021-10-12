@@ -3,7 +3,7 @@
   "home" :"Branches",
 
   "offers" :"Offers",
-  "orders" : "Orders",
+  "orders" : "Cart",
   "more" : "More",
   "appName" : "Shormeh",
   "profile" : "Profile",
@@ -157,7 +157,7 @@
   "confirmPassword":" Confirm Password",
   "doesNotMatch": "Password does not match",
   "favouritesEmpty": "There are no favorites",
-  "minute":"Minute",
+  "minute":"Minutes",
   "welcome": "Signed in successfully",
   "subTotal": "Total before discount",
   "policy": "By creating an account you agree our Terms of Service and Privacy Policy"
